@@ -2,6 +2,8 @@
 
 八个版本的双人飞行棋，支持人机轮流掷骰、进度保存、可拖动浮窗。
 
+> 和 Grok 一起做的小游戏，用来一起玩。
+
 ## 文件
 
 | 文件 | 说明 |
@@ -62,7 +64,6 @@ window.flightChessGetLastEvent()
 ```js
 FlightFloat.init({
   onRestore: function () {
-    // 用户点「飞行棋进行中」时：恢复主界面
     document.getElementById('gameMain').classList.remove('hidden');
     FlightFloat.hide();
   }
@@ -72,9 +73,9 @@ FlightFloat.init({
 ### 4. 常用 API
 
 ```js
-FlightFloat.show()                    // 显示浮窗（最小化时）
-FlightFloat.hide()                    // 隐藏浮窗
-FlightFloat.setPosText('你18 · 机15') // 更新位置文案
+FlightFloat.show()
+FlightFloat.hide()
+FlightFloat.setPosText('你18 · 机15')
 ```
 
 ### 5. 和主游戏的配合
@@ -99,3 +100,7 @@ function minimizeGame() {
 ## 快速打开
 
 浏览器直接打开 `index.html`（需与 `float-window.js` 同目录）。
+
+---
+
+Made with [Grok](https://grok.com) · 一起玩的飞行棋
