@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>双人飞行棋 · 正规规则</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F7F1EA;
+      color: #3D3229;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 12px;
+      padding-bottom: 24px;
+    }
+    .top {
+      max-width: 420px; margin: 0 auto 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .top h1 { font-size: 1rem; color: #8B7355; font-weight: 600; }
+    .btn {
+      border: none; border-radius: 8px; padding: 6px 12px;
+      font-size: 0.75rem; font-weight: 500; cursor: pointer;
+      background: #FDF8F3; border: 1px solid #E8DFD6; color: #8B7355;
+    }
+    .board-wrap {
+      max-width: 420px; margin: 0 auto;
+      background: #FDF8F3; border: 1px solid #E8DFD6;
+      border-radius: 14px; padding: 12px;
+    }
+    .legend {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; margin-bottom: 10px; color: #5C4E42;
+    }
+    .legend .p1 { color: #C4A77D; font-weight: 600; }
+    .legend .p2 { color: #7A9E8E; font-weight: 600; }
+
+    /* 简化航道：外圈环线 + 各自终点航道 */
+    .track {
+      display: grid;
+      grid-template-columns: repeat(13, 1fr);
+      gap: 3px;
+      margin-bottom: 12px;
+    }
+    .cell {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      border: 1px solid #E8DFD6;
+      background: #F7F1EA;
+      font-size: 0.45rem;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      color: #A68B6A;
+    }
+    .cell.route { background: #fff; }
+    .cell.start-p1 { background: #F5E6D3; border-color: #C4A77D; }
+    .cell.start-p2 { background: #E8F0E9; border-color: #7A9E8E; }
+    .cell.home-p1 { background: #F0E0C8; }
+    .cell.home-p2 { background: #D8E8E0; }
+    .cell.finish { background: #EDE4D8; font-weight: 600; }
+    .cell.empty { border: none; background: transparent; }
+
+    .plane {
+      width: 11px; height: 11px; border-radius: 50%;
+      border: 1.5px solid #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      position: absolute;
+    }
+    .plane.p1 { background: #C4A77D; }
+    .plane.p2 { background: #7A9E8E; }
+
+    .hangar {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .hangar-box {
+      border: 1px solid #E8DFD6; border-radius: 10px;
+      padding: 8px; background: #F7F1EA;
+    }
+    .hangar-box h3 { font-size: 0.75rem; margin-bottom: 6px; }
+    .hangar-box.p1 h3 { color: #C4A77D; }
+    .hangar-box.p2 h3 { color: #7A9E8E; }
+    .slots {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .slot {
+      width: 28px; height: 28px; border-radius: 6px;
+      border: 1px dashed #D4C4B0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; color: #A68B6A; cursor: pointer;
+    }
+    .slot.has { border-style: solid; }
+    .slot.has.p1 { background: #C4A77D; color: #fff; border-color: #C4A77D; }
+    .slot.has.p2 { background: #7A9E8E; color: #fff; border-color: #7A9E8E; }
+    .slot.selectable { outline: 2px solid #E8A07A; outline-offset: 1px; }
+
+    .status {
+      text-align: center; font-size: 0.82rem; color: #5C4E42;
+      margin-bottom: 10px; min-height: 1.4em;
+    }
+    .status strong { color: #C4A77D; }
+    .controls {
+      display: flex; justify-content: center; align-items: center; gap: 12px;
+    }
+    .dice {
+      width: 48px; height: 48px; border-radius: 10px;
+      background: #FDF8F3; border: 1.5px solid #E8DFD6;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 700; font-family: ui-monospace, monospace;
+    }
+    .roll-btn {
+      padding: 12px 22px; border-radius: 10px; border: none;
+      background: #C4A77D; color: #fff; font-size: 0.9rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .roll-btn:disabled { background: #E8DFD6; color: #A68B6A; cursor: not-allowed; }
+    .hint {
+      text-align: center; font-size: 0.72rem; color: #A68B6A;
+      margin-top: 10px; line-height: 1.4;
+    }
+    .rules-brief {
+      max-width: 420px; margin: 14px auto 0;
+      font-size: 0.72rem; color: #8B7355; line-height: 1.5;
+      background: #FDF8F3; border-radius: 10px; padding: 10px 12px;
+      border: 1px solid #E8DFD6;
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>双人飞行棋 · 正规规则</h1>
+    <button class="btn" onclick="resetGame()">重开</button>
+  </div>
+
+  <div class="board-wrap">
+    <div class="legend">
+      <span class="p1">你 · 黄</span>
+      <span class="p2">小机 · 绿</span>
+    </div>
+
+    <div class="hangar">
+      <div class="hangar-box p1">
+        <h3>你的停机坪</h3>
+        <div class="slots" id="hangar1"></div>
+      </div>
+      <div class="hangar-box p2">
+        <h3>小机停机坪</h3>
+        <div class="slots" id="hangar2"></div>
+      </div>
+    </div>
+
+    <div class="track" id="track"></div>
+
+    <div class="status" id="status">当前回合：<strong>你</strong> · 请掷骰</div>
+    <div class="controls">
+      <div class="dice" id="dice">?</div>
+      <button class="roll-btn" id="rollBtn" onclick="onRoll()">掷骰子</button>
+    </div>
+    <div class="hint" id="hint">掷到 6 才能起飞。撞到对方会送回停机坪。点数需刚好到达终点。</div>
+  </div>
+
+  <div class="rules-brief">
+    <strong>正规规则（双人简化）</strong><br>
+    · 每人 4 架飞机，掷到 <strong>6</strong> 可将一架从停机坪起飞<br>
+    · 掷到 6 可再掷一次<br>
+    · 走到与对方同一格 → 对方回停机坪<br>
+    · 进入终点航道后，必须点数刚好到终点<br>
+    · 先把 4 架全部送入终点者获胜<br>
+    · 你的回合自己掷；机的回合说「到你了」或点提示触发
+  </div>
+
+  <script>
+    // =====================================================
+    // 双人正规飞行棋（简化航道，规则按传统）
+    // 公共环线 0..51，每人终点航道 6 格
+    // =====================================================
+    const TRACK_LEN = 52; // 公共环线
+    const HOME_LEN = 6;   // 终点航道（最后一格为完成）
+
+    // 玩家起飞入口在环线上的位置
+    const ENTRY = { player: 0, ai: 26 };
+
+    // 环线在 13x 视觉上的坐标映射（简化展示用）
+    // 我们用一维逻辑位置，UI 上画环线格子
+
+    let state = {
+      turn: 'player', // player | ai
+      dice: null,
+      extraRoll: false,
+      // 每架飞机: { where: 'hangar'|'track'|'home'|'done', index: number, id: 0-3 }
+      planes: {
+        player: [
+          { id: 0, where: 'hangar', index: 0 },
+          { id: 1, where: 'hangar', index: 0 },
+          { id: 2, where: 'hangar', index: 0 },
+          { id: 3, where: 'hangar', index: 0 }
+        ],
+        ai: [
+          { id: 0, where: 'hangar', index: 0 },
+          { id: 1, where: 'hangar', index: 0 },
+          { id: 2, where: 'hangar', index: 0 },
+          { id: 3, where: 'hangar', index: 0 }
+        ]
+      },
+      phase: 'roll', // roll | select
+      movable: [],
+      finished: false
+    };
+
+    function resetGame() {
+      state = {
+        turn: 'player',
+        dice: null,
+        extraRoll: false,
+        planes: {
+          player: [0,1,2,3].map(id => ({ id, where: 'hangar', index: 0 })),
+          ai: [0,1,2,3].map(id => ({ id, where: 'hangar', index: 0 }))
+        },
+        phase: 'roll',
+        movable: [],
+        finished: false
+      };
+      document.getElementById('dice').textContent = '?';
+      render();
+      setStatus('当前回合：你 · 请掷骰');
+      setHint('掷到 6 才能起飞。');
+    }
+
+    function setStatus(t) { document.getElementById('status').innerHTML = t; }
+    function setHint(t) { document.getElementById('hint').textContent = t; }
+
+    function countDone(who) {
+      return state.planes[who].filter(p => p.where === 'done').length;
+    }
+
+    function renderHangar() {
+      ['player', 'ai'].forEach(who => {
+        const el = document.getElementById(who === 'player' ? 'hangar1' : 'hangar2');
+        el.innerHTML = '';
+        state.planes[who].forEach(p => {
+          const s = document.createElement('div');
+          s.className = 'slot' + (p.where === 'hangar' ? ' has ' + (who === 'player' ? 'p1' : 'p2') : '');
+          if (p.where === 'hangar') s.textContent = p.id + 1;
+          // 可选起飞
+          if (state.phase === 'select' && state.movable.some(m => m.who === who && m.id === p.id && m.action === 'takeoff')) {
+            s.classList.add('selectable');
+            s.onclick = () => applyMove(who, p.id, 'takeoff');
+          }
+          el.appendChild(s);
+        });
+      });
+    }
+
+    function renderTrack() {
+      const track = document.getElementById('track');
+      track.innerHTML = '';
+      // 简单展示：两行公共航道示意 + 终点区
+      // 逻辑仍用 0..51 环线；UI 用紧凑列表显示有棋子的格
+      const info = document.createElement('div');
+      info.style.cssText = 'grid-column:1/-1;font-size:0.7rem;color:#8B7355;margin-bottom:4px;';
+      info.textContent = '环线航道（点选可移动的飞机编号）';
+      track.appendChild(info);
+
+      // 显示所有在 track / home 的飞机为可点列表
+      const list = document.createElement('div');
+      list.style.cssText = 'grid-column:1/-1;display:flex;flex-direction:column;gap:6px;';
+
+      ['player', 'ai'].forEach(who => {
+        state.planes[who].forEach(p => {
+          if (p.where === 'hangar' || p.where === 'done') return;
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:#F7F1EA;border:1px solid #E8DFD6;font-size:0.78rem;';
+          const color = who === 'player' ? '#C4A77D' : '#7A9E8E';
+          const label = who === 'player' ? '你' : '机';
+          let posText = p.where === 'track' ? `环线第 ${p.index} 格` : `终点航道 ${p.index + 1}/${HOME_LEN}`;
+          row.innerHTML = `<span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;"></span>
+            <span>${label}·飞机${p.id + 1} · ${posText}</span>`;
+
+          const can = state.phase === 'select' && state.movable.some(m => m.who === who && m.id === p.id);
+          if (can) {
+            row.style.outline = '2px solid #E8A07A';
+            row.style.cursor = 'pointer';
+            const move = state.movable.find(m => m.who === who && m.id === p.id);
+            row.onclick = () => applyMove(who, p.id, move.action, move.to);
+          }
+          list.appendChild(row);
+        });
+      });
+
+      if (!list.children.length) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'font-size:0.75rem;color:#A68B6A;';
+        empty.textContent = '航道上暂无飞机';
+        list.appendChild(empty);
+      }
+      track.appendChild(list);
+
+      // 完成区
+      const done = document.createElement('div');
+      done.style.cssText = 'grid-column:1/-1;margin-top:8px;font-size:0.75rem;color:#5C4E42;';
+      done.textContent = `已到达终点：你 ${countDone('player')}/4 · 小机 ${countDone('ai')}/4`;
+      track.appendChild(done);
+    }
+
+    function render() {
+      renderHangar();
+      renderTrack();
+      const isPlayer = state.turn === 'player';
+      document.getElementById('rollBtn').disabled = state.finished || state.phase !== 'roll' || !isPlayer;
+      document.getElementById('rollBtn').textContent = isPlayer ? '掷骰子' : '等待中';
+    }
+
+    function getMovable(who, dice) {
+      const moves = [];
+      state.planes[who].forEach(p => {
+        if (p.where === 'done') return;
+
+        // 起飞
+        if (p.where === 'hangar' && dice === 6) {
+          moves.push({ who, id: p.id, action: 'takeoff' });
+          return;
+        }
+
+        if (p.where === 'track') {
+          const entry = ENTRY[who];
+          // 从当前位置前进 dice；进入终点判定
+          // 简化：环线走到 entry-1 附近可转入终点
+          // 传统：各自有进入终点的转折点。这里用：从 entry 起走满 TRACK_LEN 后进入 home
+          // 用「已飞行距离」更清晰——重构为 distance
+        }
+      });
+      // 重新用 distance 模型计算
+      return computeMoves(who, dice);
+    }
+
+    // 给每架飞机增加 flown 距离更清晰：起飞后 flown=0 在 entry
+    function computeMoves(who, dice) {
+      const moves = [];
+      const entry = ENTRY[who];
+      state.planes[who].forEach(p => {
+        if (p.where === 'done') return;
+        if (p.where === 'hangar') {
+          if (dice === 6) moves.push({ who, id: p.id, action: 'takeoff' });
+          return;
+        }
+        if (p.where === 'track') {
+          // index 是环线坐标 0..51
+          // 进入终点：当从当前位置走 dice 步会跨过「再回到 entry 之前」——简化规则：
+          // 每架飞机记录 flown（已走步数），flown + dice >= TRACK_LEN 则进入 home
+          const flown = p.flown || 0;
+          const next = flown + dice;
+          if (next >= TRACK_LEN) {
+            const homePos = next - TRACK_LEN; // 0.. 
+            if (homePos === HOME_LEN - 1) {
+              moves.push({ who, id: p.id, action: 'finish', to: homePos });
+            } else if (homePos < HOME_LEN - 1) {
+              moves.push({ who, id: p.id, action: 'tohome', to: homePos });
+            }
+            // 超过则不能走这架
+          } else {
+            const newIndex = (entry + next) % TRACK_LEN;
+            moves.push({ who, id: p.id, action: 'track', to: newIndex, flown: next });
+          }
+        }
+        if (p.where === 'home') {
+          const next = p.index + dice;
+          if (next === HOME_LEN - 1) {
+            moves.push({ who, id: p.id, action: 'finish', to: next });
+          } else if (next < HOME_LEN - 1) {
+            moves.push({ who, id: p.id, action: 'home', to: next });
+          }
+        }
+      });
+      return moves;
+    }
+
+    function onRoll() {
+      if (state.finished || state.phase !== 'roll' || state.turn !== 'player') return;
+      doRoll('player');
+    }
+
+    function doRoll(who) {
+      const dice = Math.floor(Math.random() * 6) + 1;
+      state.dice = dice;
+      document.getElementById('dice').textContent = dice;
+      state.extraRoll = (dice === 6);
+
+      const moves = computeMoves(who, dice);
+      state.movable = moves;
+
+      if (moves.length === 0) {
+        setStatus(`${who === 'player' ? '你' : '小机'} 掷到 ${dice}，无子可动`);
+        setHint('无子可动，换手');
+        endTurn(who);
+        return;
+      }
+
+      state.phase = 'select';
+      setStatus(`${who === 'player' ? '你' : '小机'} 掷到 ${dice} · 请选择要动的飞机`);
+      setHint(dice === 6 ? '掷到 6，可起飞或移动；走完可再掷' : '点选高亮的飞机或停机坪');
+      render();
+
+      // 机自动选
+      if (who === 'ai') {
+        setTimeout(() => {
+          const m = moves[Math.floor(Math.random() * moves.length)];
+          applyMove('ai', m.id, m.action, m.to, m.flown);
+        }, 600);
+      }
+    }
+
+    function applyMove(who, id, action, to, flown) {
+      const p = state.planes[who].find(x => x.id === id);
+      if (!p) return;
+
+      if (action === 'takeoff') {
+        p.where = 'track';
+        p.index = ENTRY[who];
+        p.flown = 0;
+        // 起飞占格也可能撞人
+        bumpOthers(who, p.index);
+      } else if (action === 'track') {
+        p.where = 'track';
+        p.index = to;
+        p.flown = flown;
+        bumpOthers(who, p.index);
+      } else if (action === 'tohome') {
+        p.where = 'home';
+        p.index = to;
+      } else if (action === 'home') {
+        p.where = 'home';
+        p.index = to;
+      } else if (action === 'finish') {
+        p.where = 'done';
+        p.index = 0;
+      }
+
+      state.movable = [];
+      state.phase = 'roll';
+      render();
+
+      if (countDone(who) >= 4) {
+        state.finished = true;
+        setStatus(`<strong>${who === 'player' ? '你' : '小机'} 获胜！</strong> 四架飞机全部到达`);
+        setHint('点「重开」再来一局');
+        document.getElementById('rollBtn').disabled = true;
+        return;
+      }
+
+      if (state.extraRoll) {
+        state.extraRoll = false;
+        setStatus(`${who === 'player' ? '你' : '小机'} 掷到 6，再掷一次`);
+        if (who === 'player') {
+          setHint('请再次掷骰');
+          render();
+        } else {
+          setTimeout(() => doRoll('ai'), 500);
+        }
+        return;
+      }
+
+      endTurn(who);
+    }
+
+    function bumpOthers(who, trackIndex) {
+      const other = who === 'player' ? 'ai' : 'player';
+      state.planes[other].forEach(p => {
+        if (p.where === 'track' && p.index === trackIndex) {
+          p.where = 'hangar';
+          p.index = 0;
+          p.flown = 0;
+          setHint(`${other === 'player' ? '你' : '小机'} 的一架飞机被撞回停机坪！`);
+        }
+      });
+    }
+
+    function endTurn(who) {
+      state.turn = who === 'player' ? 'ai' : 'player';
+      state.phase = 'roll';
+      state.dice = null;
+      if (state.turn === 'player') {
+        setStatus('当前回合：<strong>你</strong> · 请掷骰');
+        setHint('掷到 6 才能起飞');
+      } else {
+        setStatus('当前回合：<strong>小机</strong>');
+        setHint('对小机说「到你了」，或点这里让机掷骰');
+      }
+      render();
+    }
+
+    // 机回合点击提示触发
+    document.getElementById('hint').addEventListener('click', () => {
+      if (state.turn === 'ai' && state.phase === 'roll' && !state.finished) {
+        doRoll('ai');
+      }
+    });
+
+    window.aeroplaneAiRoll = function () {
+      if (state.turn === 'ai' && state.phase === 'roll' && !state.finished) doRoll('ai');
+    };
+
+    resetGame();
+  </script>
+</body>
+</html>
