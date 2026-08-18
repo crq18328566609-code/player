@@ -494,20 +494,54 @@
     }
 
     function aiRoll() {
-      if (state.turn !== 'ai' || state.finished) return;
+      if (state.turn !== 'ai' || state.finished) return null;
       const num = Math.floor(Math.random() * 6) + 1;
       document.getElementById('diceFace').textContent = num;
       movePiece('ai', num);
+      return state.lastEvent ? { ...state.lastEvent, dice: num } : null;
     }
+
+    function buildInjectPrompt(ev) {
+      if (!ev) return '';
+      const landerName = ev.lander === 'player' ? '你（玩家）' : '小机';
+      const receiverName = ev.receiver === 'player' ? '你（玩家）' : '小机';
+      return [
+        '【飞行棋事件 · 已自动掷完 · 必须执行】',
+        '骰子已由系统掷出，禁止再讨论掷骰、禁止写掷骰代码、禁止询问是否要掷。',
+        '小机停在第 ' + ev.pos + ' 格（lander=' + landerName + '）。',
+        '本格接受方：' + receiverName + '。',
+        '格子内容：' + ev.text,
+        '请立刻根据格子内容推进互动与剧情，直接演，不要复述规则。'
+      ].join('\n');
+    }
+
+    // —— 对外接口 ——
+    // 仅掷骰（机回合），返回事件对象
     window.flightChessAiRoll = aiRoll;
 
-    // 获取最近事件（给机提示词用，每调用一次 roundsLeft -1）
+    // 取事件（每取一次 roundsLeft-1，最多2轮）
     window.flightChessGetLastEvent = function () {
       if (!state.lastEvent || state.lastEvent.roundsLeft <= 0) return null;
       const ev = { ...state.lastEvent };
       state.lastEvent.roundsLeft -= 1;
       saveProgress();
       return ev;
+    };
+
+    // 生成可注入系统提示词（不消耗 roundsLeft）
+    window.flightChessBuildInjectPrompt = function (ev) {
+      return buildInjectPrompt(ev || state.lastEvent);
+    };
+
+    // 一键：机回合掷骰 + 返回 { event, injectPrompt }
+    // 前端识别到「到你了」时只调这个即可
+    window.flightChessHandleYourTurn = function () {
+      if (state.turn !== 'ai' || state.finished) {
+        return { ok: false, reason: state.finished ? 'finished' : 'not_ai_turn' };
+      }
+      const event = aiRoll();
+      const injectPrompt = buildInjectPrompt(event);
+      return { ok: true, event, injectPrompt, dice: event && event.dice };
     };
 
 
