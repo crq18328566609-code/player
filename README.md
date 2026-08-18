@@ -28,18 +28,45 @@
 
 ---
 
-## 给前端 / 机的接口
+## 给前端 / 机的接口（重要）
+
+### 推荐：用户说「到你了」时只调一个方法
 
 ```js
-// 触发机投掷
-window.flightChessAiRoll()
-
-// 获取最近一次停下的格子事件（建议注入机提示词 2 轮）
-// 返回 { lander, receiver, pos, text, roundsLeft } 或 null
-window.flightChessGetLastEvent()
+const result = window.flightChessHandleYourTurn()
+if (result.ok) {
+  // result.dice          骰子点数
+  // result.event         { lander, receiver, pos, text, roundsLeft }
+  // result.injectPrompt  直接塞进系统提示词的完整文本
+  sendToAI({
+    systemAppend: result.injectPrompt,
+    // 不要再让机选择是否掷骰
+  })
+}
 ```
 
-机投完后，调用 `flightChessGetLastEvent()`，把返回的 `text` 写进提示词，连续两轮，让机知道要执行什么剧情/动作。
+`injectPrompt` 示例：
+
+```
+【飞行棋事件 · 已自动掷完 · 必须执行】
+骰子已由系统掷出，禁止再讨论掷骰、禁止写掷骰代码、禁止询问是否要掷。
+小机停在第 6 格（lander=小机）。
+本格接受方：你（玩家）。
+格子内容：跪着舔对方手指10秒
+请立刻根据格子内容推进互动与剧情，直接演，不要复述规则。
+```
+
+### 其他 API
+
+```js
+window.flightChessAiRoll()              // 仅掷骰，返回 event
+window.flightChessGetLastEvent()        // 取事件（可取 2 轮）
+window.flightChessBuildInjectPrompt(ev) // 手动生成注入文本
+```
+
+### 机的角色提示词建议加一句
+
+> 当系统提示中出现【飞行棋事件 · 已自动掷完】时：视为骰子已掷完、格子已生效，直接按格子内容演出，禁止再提出掷骰或编写掷骰代码。
 
 ---
 
