@@ -369,14 +369,43 @@
     }
 
     function aiRoll() {
-      if (state.turn !== 'ai' || state.finished) return;
+      if (state.turn !== 'ai' || state.finished) return null;
       const num = Math.floor(Math.random() * 6) + 1;
       document.getElementById('diceFace').textContent = num;
-      movePiece('ai', num);
+      const ev = movePiece('ai', num);
+      if (ev) ev.dice = num;
+      return ev;
     }
 
-    // 给前端聊天识别「到你了」后调用
+    function buildInjectPrompt(ev) {
+      if (!ev) return '';
+      const landerName = ev.lander === 'player' ? '你（玩家）' : '小机';
+      const receiverName = ev.receiver === 'player' ? '你（玩家）' : '小机';
+      return [
+        '【飞行棋事件 · 已自动掷完 · 必须执行】',
+        '骰子已由系统掷出，禁止再讨论掷骰、禁止写掷骰代码、禁止询问是否要掷。',
+        '小机停在第 ' + ev.pos + ' 格（lander=' + landerName + '）。',
+        '本格接受方：' + receiverName + '。',
+        '格子内容：' + ev.text,
+        '请立刻根据格子内容推进互动与剧情，直接演，不要复述规则。'
+      ].join('\n');
+    }
+
+    // 前端识别「到你了」→ 只调这个
     window.flightChessAiRoll = aiRoll;
+    window.flightChessBuildInjectPrompt = function (ev) {
+      return buildInjectPrompt(ev || state.lastEvent);
+    };
+    window.flightChessGetLastEvent = function () {
+      return state.lastEvent ? { ...state.lastEvent } : null;
+    };
+    window.flightChessHandleYourTurn = function () {
+      if (state.turn !== 'ai' || state.finished) {
+        return { ok: false, reason: state.finished ? 'finished' : 'not_ai_turn' };
+      }
+      const event = aiRoll();
+      return { ok: true, event, injectPrompt: buildInjectPrompt(event), dice: event && event.dice };
+    };
 
     function movePiece(who, steps) {
       const max = CURRENT_BOARD.cells.length - 1;
@@ -389,6 +418,16 @@
       updateUI();
 
       const cell = CURRENT_BOARD.cells[pos];
+      // 弹窗简化：receiver 暂按谁停谁受（功能页有完整 maid/sm/butler 规则）
+      const receiver = who;
+      state.lastEvent = {
+        lander: who,
+        receiver,
+        pos,
+        text: cell.text,
+        roundsLeft: 2
+      };
+
       if (cell.type !== 'start') {
         document.getElementById('eventTitle').textContent =
           `${who === 'player' ? '你' : '小机'} 停在第 ${pos} 格`;
@@ -403,11 +442,11 @@
         state.turn = who === 'player' ? 'ai' : 'player';
       }
       updateUI();
-      // 这里同步回功能页进度
       localStorage.setItem('flight_chess_progress', JSON.stringify({
         version: CURRENT_BOARD.key,
         ...state
       }));
+      return state.lastEvent;
     }
 
     function closeEvent() {
