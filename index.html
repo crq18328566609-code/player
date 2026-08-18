@@ -447,6 +447,22 @@
       return ev;
     };
 
+
+    // 根据图纸决定「谁接受格子内容」
+    // maid / sm → 永远是玩家（女方）
+    // butler → 永远是机（男方）
+    // 其他 → 谁停谁受
+    function resolveReceiver(lander) {
+      const v = state.version;
+      if (v === 'maid' || v === 'sm') return 'player';
+      if (v === 'butler') return 'ai';
+      return lander;
+    }
+
+    function receiverLabel(receiver) {
+      return receiver === 'player' ? '你' : '小机';
+    }
+
     function movePiece(who, steps) {
       const board = BOARDS[state.version];
       const max = board.cells.length - 1;
@@ -469,15 +485,17 @@
       updateUI();
 
       const finalCell = board.cells[pos];
-      // 记录事件，供机提示词注入（保留2轮）
+      const receiver = resolveReceiver(who);
+      // lander=谁停的，receiver=谁接受格子内容（供机提示词）
       state.lastEvent = {
-        who,
+        lander: who,
+        receiver,
         pos,
         text: finalCell.text,
         roundsLeft: 2
       };
 
-      showEvent(who, finalCell, pos);
+      showEvent(who, receiver, finalCell, pos);
 
       if (pos >= max) {
         state.finished = true;
@@ -494,14 +512,18 @@
       saveProgress();
     }
 
-    function showEvent(who, cell, pos) {
+    function showEvent(lander, receiver, cell, pos) {
       if (cell.type === 'start') return;
-      const name = who === 'player' ? '你' : '小机';
+      const landerName = receiverLabel(lander);
+      const receiverName = receiverLabel(receiver);
       let desc = cell.text;
       if (cell.backSteps > 0) {
         desc += `（已后退 ${cell.backSteps} 格，现位于第 ${pos} 格）`;
       }
-      document.getElementById('eventTitle').textContent = `${name} 停在第 ${pos} 格`;
+      if (lander !== receiver) {
+        desc = `【本次由${receiverName}接受】\n` + desc;
+      }
+      document.getElementById('eventTitle').textContent = `${landerName} 停在第 ${pos} 格`;
       document.getElementById('eventDesc').textContent = desc;
       document.getElementById('eventModal').classList.add('show');
     }
