@@ -187,10 +187,11 @@
   </div>
 
   <div class="float-bar" id="floatBar">
-    <span onclick="restoreGame()" style="cursor:pointer;">飞行棋进行中</span>
-    <span id="floatPos" style="opacity:0.85;font-size:0.7rem;"></span>
+    <span data-float-restore style="cursor:pointer;">飞行棋进行中</span>
+    <span data-float-pos style="opacity:0.85;font-size:0.7rem;"></span>
   </div>
 
+  <script src="float-window.js"></script>
   <script>
     // =====================================================
     // 格子数据：去掉「被」，停下的人接受格子内容
@@ -350,7 +351,6 @@
       loadProgress();
       renderBoard();
       updateUI();
-      setupFloatDrag();
     }
 
     function renderVersionBar() {
@@ -418,8 +418,9 @@
         !isPlayer && !state.finished
           ? '对小机说「到你了」，然后点这里或调用 flightChessAiRoll()'
           : '';
-      document.getElementById('floatPos').textContent =
-        `你${state.playerPos} · 机${state.aiPos}`;
+      if (window.FlightFloat) {
+        FlightFloat.setPosText(`你${state.playerPos} · 机${state.aiPos}`);
+      }
     }
 
     function rollDice() {
@@ -532,68 +533,27 @@
     function minimizeGame() {
       saveProgress();
       document.getElementById('gameMain').classList.add('hidden');
-      document.getElementById('floatBar').classList.add('show');
+      if (window.FlightFloat) FlightFloat.show();
     }
 
     function restoreGame() {
       document.getElementById('gameMain').classList.remove('hidden');
-      document.getElementById('floatBar').classList.remove('show');
+      if (window.FlightFloat) FlightFloat.hide();
       loadProgress();
       renderVersionBar();
       renderBoard();
       updateUI();
     }
 
-    // 浮窗可拖动
-    function setupFloatDrag() {
-      const bar = document.getElementById('floatBar');
-      let dragging = false;
-      let startX, startY, origX, origY;
-
-      function onStart(e) {
-        if (e.target.closest('span') && e.target.textContent.includes('飞行棋')) {
-          // 点击文字恢复，不拖
-          return;
-        }
-        dragging = true;
-        const pt = e.touches ? e.touches[0] : e;
-        startX = pt.clientX;
-        startY = pt.clientY;
-        const rect = bar.getBoundingClientRect();
-        origX = rect.left;
-        origY = rect.top;
-        bar.style.right = 'auto';
-        bar.style.bottom = 'auto';
-        bar.style.left = origX + 'px';
-        bar.style.top = origY + 'px';
-        e.preventDefault();
-      }
-
-      function onMove(e) {
-        if (!dragging) return;
-        const pt = e.touches ? e.touches[0] : e;
-        const dx = pt.clientX - startX;
-        const dy = pt.clientY - startY;
-        bar.style.left = (origX + dx) + 'px';
-        bar.style.top = (origY + dy) + 'px';
-      }
-
-      function onEnd() {
-        dragging = false;
-      }
-
-      bar.addEventListener('mousedown', onStart);
-      bar.addEventListener('touchstart', onStart, { passive: false });
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('touchmove', onMove, { passive: false });
-      window.addEventListener('mouseup', onEnd);
-      window.addEventListener('touchend', onEnd);
-    }
 
     document.getElementById('aiHint').addEventListener('click', function () {
       if (state.turn === 'ai' && !state.finished) aiRoll();
     });
 
+    // 浮窗模块
+    if (window.FlightFloat) {
+      FlightFloat.init({ onRestore: restoreGame });
+    }
     init();
   </script>
 </body>
