@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>飞行棋 · 聊天弹窗（单版本）</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #EDE6DE;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    /* ===== 弹窗本体：固定大小 ===== */
+    .popup {
+      width: 100%;
+      max-width: 340px;
+      height: 520px;
+      max-height: 85vh;
+      background: #F7F8FA;
+      border-radius: 16px;
+      border: 1px solid #E5E7EB;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .popup-header {
+      flex-shrink: 0;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #EEF0F3;
+      background: #fff;
+    }
+    .popup-header .title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    .popup-header .close {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: #F3F4F6;
+      color: #6B7280;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .board-area {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 8px 10px 0;
+      overflow: hidden;
+    }
+    .board-meta {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: #9CA3AF;
+      margin-bottom: 6px;
+      padding: 0 2px;
+    }
+    /* 格子区域可上下滑动 */
+    .path-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px;
+    }
+    .path-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .path-scroll::-webkit-scrollbar-thumb {
+      background: #D1D5DB;
+      border-radius: 4px;
+    }
+    .path {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .cell {
+      aspect-ratio: 1/1;
+      border-radius: 5px;
+      border: 1px solid #E8DFD6;
+      background: #F7F1EA;
+      font-size: 0.42rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1px;
+      position: relative;
+      line-height: 1.05;
+      color: #5C4E42;
+      overflow: hidden;
+    }
+    .cell.start { background: #E8F0E9; border-color: #A8C5B0; font-weight: 600; font-size: 0.48rem; }
+    .cell.end { background: #F5E6D3; border-color: #D4B896; font-weight: 600; font-size: 0.48rem; }
+    .cell.special { background: #F8EDE8; border-color: #E0B8A8; }
+    .cell .num {
+      position: absolute; top: 1px; left: 1px;
+      font-size: 0.38rem; color: #A68B6A;
+      font-family: ui-monospace, monospace;
+    }
+    .piece {
+      width: 8px; height: 8px; border-radius: 50%;
+      position: absolute; bottom: 1px;
+      border: 1px solid #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .piece.player { background: #C4A77D; right: 1px; }
+    .piece.ai { background: #7A9E8E; right: 10px; }
+
+    /* 操作区固定在底部 */
+    .action-area {
+      flex-shrink: 0;
+      padding: 10px 14px 14px;
+      border-top: 1px solid #EEF0F3;
+      background: #fff;
+    }
+    .turn-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .turn-text {
+      font-size: 0.82rem;
+      color: #5C4E42;
+    }
+    .turn-text strong { color: #C4A77D; }
+    .dice {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      background: #F7F1EA;
+      border: 1.5px solid #E8DFD6;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700;
+      color: #5C4E42;
+      font-family: ui-monospace, monospace;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-row button {
+      flex: 1;
+      padding: 11px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-roll {
+      background: #C4A77D;
+      color: #fff;
+    }
+    .btn-roll:disabled {
+      background: #E8DFD6;
+      color: #A68B6A;
+      cursor: not-allowed;
+    }
+    .btn-ai {
+      background: #E8F0E9;
+      color: #4A7C59;
+      border: 1px solid #C5D9C9 !important;
+    }
+    .btn-ai:disabled {
+      background: #F0E8DF;
+      color: #B0A69C;
+      cursor: not-allowed;
+    }
+
+    /* 事件弹层（叠在弹窗上） */
+    .event-layer {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      border-radius: 18px;
+    }
+    .event-layer.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .event-box {
+      width: 85%;
+      background: #FDF8F3;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #E8DFD6;
+    }
+    .event-box h4 {
+      font-size: 0.9rem;
+      color: #5C4E42;
+      margin-bottom: 6px;
+    }
+    .event-box p {
+      font-size: 0.8rem;
+      color: #7A6E63;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+    .event-box button {
+      width: 100%;
+      padding: 9px;
+      border-radius: 8px;
+      border: none;
+      background: #C4A77D;
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .popup-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="popup-wrap">
+    <div class="popup" id="popup">
+      <div class="popup-header">
+        <div class="title" id="boardName">女仆版</div>
+        <button class="close" onclick="alert('关闭弹窗（前端接关闭逻辑）')">×</button>
+      </div>
+
+      <div class="board-area">
+        <div class="board-meta">
+          <span id="posText">你 0 · 机 0</span>
+          <span id="cellCount">50格</span>
+        </div>
+        <div class="path-scroll">
+          <div class="path" id="boardPath"></div>
+        </div>
+      </div>
+
+      <div class="action-area">
+        <div class="turn-row">
+          <div class="turn-text" id="turnText">当前回合：<strong>你</strong></div>
+          <div class="dice" id="diceFace">?</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-roll" id="btnRoll" onclick="playerRoll()">我投掷</button>
+          <button class="btn-ai" id="btnAi" onclick="aiRoll()">到你了</button>
+        </div>
+      </div>
+
+      <!-- 格子事件 -->
+      <div class="event-layer" id="eventLayer">
+        <div class="event-box">
+          <h4 id="eventTitle">格子事件</h4>
+          <p id="eventDesc">...</p>
+          <button onclick="closeEvent()">知道了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================
+    // 这里只放「当前选中的版本」数据
+    // 实际接入时从功能页 / 全局状态读进来
+    // =====================================================
+    function makeCells(list) {
+      return list.map((t, i) => {
+        let type = 'normal';
+        if (i === 0) type = 'start';
+        else if (i === list.length - 1) type = 'end';
+        else if (/后进|强制|惩罚|终点|后退/.test(t)) type = 'special';
+        return { text: t, type };
+      });
+    }
+
+    // 示例：当前选的是女仆版（接入时替换成功能页选中的那个）
+    const CURRENT_BOARD = {
+      key: 'maid',
+      name: '女仆版',
+      cells: makeCells([
+        '起点','自己开口亲对方15秒','被对方用棒棒糖塞嘴再抽插','后进3格','用舌尖自慰阴蒂到对方说停',
+        '被男主绑起来用跳蛋','自己抓奶到红','口含跳蛋被抽插','后进2格','跪着为男主口交1分钟',
+        '被男主打屁股20下','用双乳为男主服务','后进1格','被男主从后面进入','自己掰开给对方看',
+        '被蒙眼玩10分钟','强制高潮一次','用嘴接住并吞下','后进3格','被绑住无法动弹',
+        '男主任意使用5分钟','口交到射','后进2格','被内射并保持','自己说出最羞耻的话',
+        '被打屁股到红','用跳蛋塞住走路','被拉头发后入','强制边缘3次','后进1格',
+        '被命令自慰给对方看','口爆并保持含着','被玩到求饶','后进2格','戴项圈被牵着走',
+        '被完全束缚','接受任何姿势','被内射后不许清理','强制高潮两次','后进3格',
+        '被蒙眼+耳塞','完全服从指令','被使用到腿软','后进1格','自己求继续',
+        '被打到留下印记','彻底臣服于男主','被内射并感谢','后进2格','终点·彻底成为女仆'
+      ])
+    };
+
+    // 进度（与功能页共用同一份，实际用 localStorage 或全局状态同步）
+    let state = {
+      playerPos: 0,
+      aiPos: 0,
+      turn: 'player',
+      finished: false
+    };
+
+    function renderBoard() {
+      document.getElementById('boardName').textContent = CURRENT_BOARD.name;
+      document.getElementById('cellCount').textContent = CURRENT_BOARD.cells.length + '格';
+      document.getElementById('posText').textContent =
+        `你 ${state.playerPos} · 机 ${state.aiPos}`;
+
+      const path = document.getElementById('boardPath');
+      path.innerHTML = '';
+      CURRENT_BOARD.cells.forEach((cell, i) => {
+        const div = document.createElement('div');
+        div.className = 'cell ' + (cell.type || 'normal');
+        div.innerHTML = `<span class="num">${i}</span>${cell.text}`;
+        if (state.playerPos === i) {
+          const p = document.createElement('div');
+          p.className = 'piece player';
+          div.appendChild(p);
+        }
+        if (state.aiPos === i) {
+          const a = document.createElement('div');
+          a.className = 'piece ai';
+          div.appendChild(a);
+        }
+        path.appendChild(div);
+      });
+    }
+
+    function updateUI() {
+      const isPlayer = state.turn === 'player';
+      document.getElementById('turnText').innerHTML =
+        state.finished
+          ? '<strong>本局结束</strong>'
+          : `当前回合：<strong>${isPlayer ? '你' : '小机'}</strong>`;
+      document.getElementById('btnRoll').disabled = !isPlayer || state.finished;
+      document.getElementById('btnAi').disabled = isPlayer || state.finished;
+    }
+
+    function playerRoll() {
+      if (state.turn !== 'player' || state.finished) return;
+      const num = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('diceFace').textContent = num;
+      movePiece('player', num);
+    }
+
+    function aiRoll() {
+      if (state.turn !== 'ai' || state.finished) return;
+      const num = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('diceFace').textContent = num;
+      movePiece('ai', num);
+    }
+
+    // 给前端聊天识别「到你了」后调用
+    window.flightChessAiRoll = aiRoll;
+
+    function movePiece(who, steps) {
+      const max = CURRENT_BOARD.cells.length - 1;
+      let pos = who === 'player' ? state.playerPos : state.aiPos;
+      pos = Math.min(pos + steps, max);
+      if (who === 'player') state.playerPos = pos;
+      else state.aiPos = pos;
+
+      renderBoard();
+      updateUI();
+
+      const cell = CURRENT_BOARD.cells[pos];
+      if (cell.type !== 'start') {
+        document.getElementById('eventTitle').textContent =
+          `${who === 'player' ? '你' : '小机'} 停在第 ${pos} 格`;
+        document.getElementById('eventDesc').textContent = cell.text;
+        document.getElementById('eventLayer').classList.add('show');
+      }
+
+      if (pos >= max) {
+        state.finished = true;
+        setTimeout(() => alert(who === 'player' ? '你先到达终点！' : '小机先到达终点！'), 300);
+      } else {
+        state.turn = who === 'player' ? 'ai' : 'player';
+      }
+      updateUI();
+      // 这里同步回功能页进度
+      localStorage.setItem('flight_chess_progress', JSON.stringify({
+        version: CURRENT_BOARD.key,
+        ...state
+      }));
+    }
+
+    function closeEvent() {
+      document.getElementById('eventLayer').classList.remove('show');
+    }
+
+    // 启动时尝试读取已有进度
+    (function () {
+      const raw = localStorage.getItem('flight_chess_progress');
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw);
+          if (saved.version === CURRENT_BOARD.key) {
+            state.playerPos = saved.playerPos || 0;
+            state.aiPos = saved.aiPos || 0;
+            state.turn = saved.turn || 'player';
+            state.finished = saved.finished || false;
+          }
+        } catch (e) {}
+      }
+      renderBoard();
+      updateUI();
+    })();
+  </script>
+</body>
+</html>
