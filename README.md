@@ -2,8 +2,6 @@
 
 八个版本的双人飞行棋，支持人机轮流掷骰、进度保存、可拖动浮窗。
 
-> 和 Grok 一起做的小游戏，用来一起玩。
-
 ## 文件
 
 | 文件 | 说明 |
@@ -20,8 +18,13 @@
 
 1. **停下才生效**：只有棋子停在格子上才触发内容；路过不触发。
 2. **后进格**：停在「后进X格」上会实际后退 X 格。
-3. **格子内容**：停下的人接受该格内容。你停在某格 → 机可按该格内容对你行动；机停在某格 → 可用文字/剧情执行。
+3. **谁接受格子内容**（按图纸）：
+   - **女仆版 / SM版**：无论谁停，都是**你（女方）**接受
+   - **男仆版**：无论谁停，都是**机（男方）**接受
+   - **其他版本**：谁停谁接受
 4. **回合**：你的回合点「掷骰子」；机的回合对机说「到你了」后触发投掷。
+
+`flightChessGetLastEvent()` 会返回 `lander`（谁停的）和 `receiver`（谁接受内容），方便机写剧情。
 
 ---
 
@@ -32,7 +35,7 @@
 window.flightChessAiRoll()
 
 // 获取最近一次停下的格子事件（建议注入机提示词 2 轮）
-// 返回 { who, pos, text, roundsLeft } 或 null
+// 返回 { lander, receiver, pos, text, roundsLeft } 或 null
 window.flightChessGetLastEvent()
 ```
 
@@ -64,6 +67,7 @@ window.flightChessGetLastEvent()
 ```js
 FlightFloat.init({
   onRestore: function () {
+    // 用户点「飞行棋进行中」时：恢复主界面
     document.getElementById('gameMain').classList.remove('hidden');
     FlightFloat.hide();
   }
@@ -73,9 +77,9 @@ FlightFloat.init({
 ### 4. 常用 API
 
 ```js
-FlightFloat.show()
-FlightFloat.hide()
-FlightFloat.setPosText('你18 · 机15')
+FlightFloat.show()                    // 显示浮窗（最小化时）
+FlightFloat.hide()                    // 隐藏浮窗
+FlightFloat.setPosText('你18 · 机15') // 更新位置文案
 ```
 
 ### 5. 和主游戏的配合
@@ -100,7 +104,3 @@ function minimizeGame() {
 ## 快速打开
 
 浏览器直接打开 `index.html`（需与 `float-window.js` 同目录）。
-
----
-
-Made with [Grok](https://grok.com) · 一起玩的飞行棋
