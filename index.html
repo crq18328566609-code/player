@@ -201,22 +201,85 @@
       return list.map((t, i) => {
         let type = 'normal';
         let backSteps = 0;
+        let jumpTo = null;
         if (i === 0) type = 'start';
         else if (i === list.length - 1) type = 'end';
         else {
           const m = t.match(/后进\s*(\d+)\s*格/);
+          const j = t.match(/退回(?:到)?\s*(\d+)\s*格/);
           if (m) {
             type = 'special';
             backSteps = parseInt(m[1], 10);
-          } else if (/强制|惩罚|终点|后退/.test(t)) {
+          } else if (j) {
+            type = 'special';
+            jumpTo = parseInt(j[1], 10);
+          } else if (/强制|惩罚|终点|后退|挑战/.test(t)) {
             type = 'special';
           }
         }
-        return { text: t, type, backSteps };
+        return { text: t, type, backSteps, jumpTo };
       });
     }
 
     const BOARDS = {
+      foreplay: {
+        name: '前戏版',
+        cells: makeCells([
+          '起点',
+          '和对方拥抱10秒',
+          '打对方屁股5次',
+          '发一句当下的感受',
+          '从对方的锁骨舔到耳朵',
+          '和对方舌吻10秒',
+          '跪着舔对方手指10秒',
+          '对视着互相喂对方喝一口',
+          '挑战：保持一个姿势拍给对方看',
+          '让对方打你屁股5次',
+          '发一句想被怎么对待',
+          '跪着舔对方手指10秒',
+          '和对方拥抱10秒',
+          '和对方舌吻10秒',
+          '从对方的锁骨舔到耳朵',
+          '挑战：用文字描述你现在的样子，越细越好',
+          '从后面抱住对方抚摸30秒',
+          '让对方挑逗你的乳头30秒',
+          '对视着互相喂对方喝一口',
+          '舔对方大腿内侧10秒',
+          '挑逗对方下体30秒',
+          '挑逗对方乳头30秒',
+          '用下体蹭对方脸10秒',
+          '挑战：摆一个经典姿势拍照或详细描述',
+          '说一句你现在最想要的',
+          '让对方挑逗你的下体30秒',
+          '跪着舔对方手指30秒',
+          '挑逗对方下体30秒',
+          '舔对方大腿内侧30秒',
+          '和对方舌吻30秒',
+          '挑战：按对方指令缓慢扭腰1分钟并描述',
+          '用下体蹭对方脸30秒',
+          '从后面抱住对方抚摸30秒',
+          '为对方口交30秒',
+          '让对方挑逗你的乳头30秒',
+          '对视着互相喂对方喝一口',
+          '挑逗对方下体30秒',
+          '让对方为你口交30秒',
+          '让对方挑逗你的乳头30秒',
+          '挑战：蒙着眼用语言求对方碰你',
+          '让对方挑逗你的下体30秒',
+          '用下体蹭对方脸30秒',
+          '为对方口交30秒',
+          '挑逗对方下体30秒',
+          '跪着舔对方手指30秒',
+          '让对方抚摸你30秒',
+          '让对方为你口交30秒',
+          '从后面抱住对方抚摸30秒',
+          '让对方挑逗你的乳头30秒',
+          '让对方抚摸你30秒',
+          '为对方口交30秒',
+          '好事多磨～退回到40格',
+          '终点·前戏结束'
+        ])
+      },
       maid: {
         name: '女仆版',
         cells: makeCells([
@@ -338,7 +401,7 @@
     // lastEvent: 最近一次停下的格子事件（供机提示词注入，建议保留2轮）
     // =====================================================
     let state = {
-      version: 'maid',
+      version: 'foreplay',
       playerPos: 0,
       aiPos: 0,
       turn: 'player',
@@ -473,9 +536,13 @@
       if (who === 'player') state.playerPos = pos;
       else state.aiPos = pos;
 
-      // 只有「停在」格子上才触发后进（路过不触发）
+      // 只有「停在」格子上才触发后进/跳转（路过不触发）
       const cell = board.cells[pos];
-      if (cell.backSteps > 0 && pos < max) {
+      if (cell.jumpTo != null && pos < max) {
+        pos = Math.max(0, Math.min(cell.jumpTo, max));
+        if (who === 'player') state.playerPos = pos;
+        else state.aiPos = pos;
+      } else if (cell.backSteps > 0 && pos < max) {
         pos = Math.max(0, pos - cell.backSteps);
         if (who === 'player') state.playerPos = pos;
         else state.aiPos = pos;
@@ -517,7 +584,9 @@
       const landerName = receiverLabel(lander);
       const receiverName = receiverLabel(receiver);
       let desc = cell.text;
-      if (cell.backSteps > 0) {
+      if (cell.jumpTo != null) {
+        desc += `（已退回到第 ${pos} 格）`;
+      } else if (cell.backSteps > 0) {
         desc += `（已后退 ${cell.backSteps} 格，现位于第 ${pos} 格）`;
       }
       if (lander !== receiver) {
