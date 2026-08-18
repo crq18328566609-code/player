@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>飞行棋 · 和机一起玩</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F7F1EA;
+      color: #3D3229;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 10px;
+      padding-bottom: 70px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 520px;
+      margin: 0 auto 10px;
+    }
+    .top-bar h1 { font-size: 0.95rem; color: #8B7355; font-weight: 600; }
+    .btn {
+      border: none; border-radius: 8px; padding: 6px 11px;
+      font-size: 0.75rem; font-weight: 500; cursor: pointer;
+    }
+    .btn-ghost {
+      background: #FDF8F3; border: 1px solid #E8DFD6; color: #8B7355;
+    }
+    .version-scroll {
+      display: flex; gap: 6px; overflow-x: auto; max-width: 520px;
+      margin: 0 auto 12px; padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+    }
+    .version-scroll::-webkit-scrollbar { display: none; }
+    .ver-btn {
+      flex-shrink: 0; padding: 5px 11px; border-radius: 16px;
+      border: 1px solid #E8DFD6; background: #FDF8F3;
+      font-size: 0.72rem; color: #7A6E63; cursor: pointer;
+    }
+    .ver-btn.active {
+      background: #C4A77D; color: #fff; border-color: #C4A77D;
+    }
+    .board-wrap {
+      max-width: 520px; margin: 0 auto; background: #FDF8F3;
+      border: 1px solid #E8DFD6; border-radius: 14px; padding: 10px 8px 14px;
+    }
+    .board-title {
+      text-align: center; font-size: 0.85rem; font-weight: 600;
+      color: #5C4E42; margin-bottom: 8px;
+    }
+    .path {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    }
+    .cell {
+      aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #E8DFD6;
+      background: #F7F1EA; font-size: 0.48rem; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 2px 1px; position: relative;
+      line-height: 1.1; color: #5C4E42; overflow: hidden;
+    }
+    .cell.start { background: #E8F0E9; border-color: #A8C5B0; font-weight: 600; font-size: 0.55rem; }
+    .cell.end { background: #F5E6D3; border-color: #D4B896; font-weight: 600; font-size: 0.55rem; }
+    .cell.special { background: #F8EDE8; border-color: #E0B8A8; }
+    .cell .num {
+      position: absolute; top: 1px; left: 2px; font-size: 0.42rem;
+      color: #A68B6A; font-family: ui-monospace, monospace;
+    }
+    .piece {
+      width: 10px; height: 10px; border-radius: 50%; position: absolute;
+      bottom: 2px; border: 1px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    }
+    .piece.player { background: #C4A77D; right: 2px; }
+    .piece.ai { background: #7A9E8E; right: 13px; }
+
+    .status-bar {
+      max-width: 520px; margin: 12px auto 0;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .turn-info { font-size: 0.8rem; color: #5C4E42; }
+    .turn-info strong { color: #C4A77D; }
+    .dice-area { display: flex; align-items: center; gap: 8px; }
+    .dice {
+      width: 42px; height: 42px; border-radius: 9px; background: #FDF8F3;
+      border: 1.5px solid #E8DFD6; display: flex; align-items: center;
+      justify-content: center; font-size: 1.25rem; font-weight: 700;
+      color: #5C4E42; font-family: ui-monospace, monospace;
+    }
+    .roll-btn {
+      padding: 9px 16px; border-radius: 9px; border: none;
+      background: #C4A77D; color: #fff; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .roll-btn:disabled {
+      background: #E8DFD6; color: #A68B6A; cursor: not-allowed;
+    }
+    .ai-hint {
+      max-width: 520px; margin: 8px auto 0; text-align: center;
+      font-size: 0.75rem; color: #A68B6A;
+    }
+
+    .event-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s; padding: 18px;
+    }
+    .event-modal.show { opacity: 1; pointer-events: auto; }
+    .event-card {
+      width: 100%; max-width: 300px; background: #FDF8F3;
+      border-radius: 14px; padding: 18px 16px; border: 1px solid #E8DFD6;
+    }
+    .event-card h3 { font-size: 0.95rem; color: #5C4E42; margin-bottom: 6px; }
+    .event-card p { font-size: 0.82rem; color: #7A6E63; line-height: 1.45; margin-bottom: 14px; }
+    .event-card .ok {
+      width: 100%; padding: 10px; border-radius: 9px; border: none;
+      background: #C4A77D; color: #fff; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer;
+    }
+
+    /* 可拖动浮窗 */
+    .float-bar {
+      position: fixed;
+      bottom: 18px;
+      right: 14px;
+      background: #C4A77D;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 22px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+      cursor: grab;
+      z-index: 40;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      touch-action: none;
+    }
+    .float-bar.show { display: flex; }
+    .float-bar:active { cursor: grabbing; }
+    .game-main.hidden { display: none; }
+
+    .pos-info {
+      max-width: 520px; margin: 8px auto 0; font-size: 0.72rem;
+      color: #A68B6A; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-main" id="gameMain">
+    <div class="top-bar">
+      <h1>飞行棋</h1>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost" onclick="saveProgress()">保存</button>
+        <button class="btn btn-ghost" onclick="minimizeGame()">最小化</button>
+      </div>
+    </div>
+
+    <div class="version-scroll" id="versionBar"></div>
+
+    <div class="board-wrap">
+      <div class="board-title" id="boardTitle">女仆版</div>
+      <div class="path" id="boardPath"></div>
+    </div>
+
+    <div class="pos-info" id="posInfo">你：第 0 格 · 小机：第 0 格</div>
+
+    <div class="status-bar">
+      <div class="turn-info" id="turnInfo">当前回合：<strong>你</strong></div>
+      <div class="dice-area">
+        <div class="dice" id="diceFace">?</div>
+        <button class="roll-btn" id="rollBtn" onclick="rollDice()">掷骰子</button>
+      </div>
+    </div>
+    <div class="ai-hint" id="aiHint"></div>
+  </div>
+
+  <div class="event-modal" id="eventModal">
+    <div class="event-card">
+      <h3 id="eventTitle">格子事件</h3>
+      <p id="eventDesc">...</p>
+      <button class="ok" onclick="closeEvent()">知道了</button>
+    </div>
+  </div>
+
+  <div class="float-bar" id="floatBar">
+    <span onclick="restoreGame()" style="cursor:pointer;">飞行棋进行中</span>
+    <span id="floatPos" style="opacity:0.85;font-size:0.7rem;"></span>
+  </div>
+
+  <script>
+    // =====================================================
+    // 格子数据：去掉「被」，停下的人接受格子内容
+    // 后进X格：只有停在上面才生效，会实际后退
+    // =====================================================
+    function makeCells(list) {
+      return list.map((t, i) => {
+        let type = 'normal';
+        let backSteps = 0;
+        if (i === 0) type = 'start';
+        else if (i === list.length - 1) type = 'end';
+        else {
+          const m = t.match(/后进\s*(\d+)\s*格/);
+          if (m) {
+            type = 'special';
+            backSteps = parseInt(m[1], 10);
+          } else if (/强制|惩罚|终点|后退/.test(t)) {
+            type = 'special';
+          }
+        }
+        return { text: t, type, backSteps };
+      });
+    }
+
+    const BOARDS = {
+      maid: {
+        name: '女仆版',
+        cells: makeCells([
+          '起点','自己开口亲对方15秒','对方用棒棒糖塞你嘴里再抽插','后进3格','用舌尖自慰阴蒂到对方说停',
+          '男主把你绑起来用跳蛋','自己抓奶到红','口含跳蛋被抽插','后进2格','跪着为男主口交1分钟',
+          '男主打你屁股20下','用双乳为男主服务','后进1格','男主从后面进入你','自己掰开给对方看',
+          '蒙眼被玩10分钟','强制高潮一次','用嘴接住并吞下','后进3格','绑住你无法动弹',
+          '男主任意使用你5分钟','口交到射','后进2格','内射你并保持','自己说出最羞耻的话',
+          '打屁股到红','用跳蛋塞住走路','拉头发后入你','强制边缘3次','后进1格',
+          '命令你自慰给对方看','口爆并保持含着','玩到你求饶','后进2格','戴项圈被牵着走',
+          '完全束缚你','接受任何姿势','内射后不许清理','强制高潮两次','后进3格',
+          '蒙眼+耳塞','完全服从指令','使用你到腿软','后进1格','自己求继续',
+          '打到留下印记','彻底臣服于男主','内射并感谢','后进2格','终点·彻底成为女仆'
+        ])
+      },
+      couple: {
+        name: '情侣版',
+        cells: makeCells([
+          '起点','互相深吻1分钟','脱掉对方一件衣服','后进2格','用舌头舔对方耳朵',
+          '互相抚摸胸口','口交30秒','后进1格','对方边摸边亲你','坐在对方腿上扭腰',
+          '互相手活1分钟','后进3格','69姿势30秒','对方从后面抱住你','自己说想要的方式',
+          '强制高潮','内射或射在你身上','后进2格','保持插入不动1分钟','对方完全控制你',
+          '互相舔全身','后进1格','换三个姿势','亲到你喘不过气','一起洗澡互相洗',
+          '后进2格','在镜子前做','抱起来做','强制边缘后给','后进1格',
+          '说十句骚话','咬你脖子留印','后进3格','用嘴喂对方喝水','从背后抱紧你',
+          '一起高潮','后进1格','事后互相清理','再来一次','后进2格',
+          '要求你扮演角色','完全敞开身体','互相摸到湿','后进1格','要求你主动骑乘',
+          '亲吻到对方求停','后进2格','终点·一起沉沦'
+        ])
+      },
+      private_adv: {
+        name: '私密进阶版',
+        cells: makeCells([
+          '起点','用手指插入自己','对方用跳蛋玩你','后进2格','口交并吞咽',
+          '绑住你双手','后进1格','打你屁股15下','自己骑乘1分钟','后入你',
+          '强制边缘3次','内射你','后进3格','完全服从指令','蒙眼使用你',
+          '后进1格','用道具扩张','玩到你失控','强制高潮','后进2格',
+          '命令你保持姿势','接受多重刺激','后进1格','拉头发狠干你','自己求被使用',
+          '后进3格','完全填满你','不许高潮只能边缘','后进1格','内射后展示',
+          '接受任何惩罚','玩到你哭','后进2格','彻底打开身体','连续使用你',
+          '后进1格','用跳蛋走完一圈','命令你自己说骚话','后进2格','玩到你腿软站不住',
+          '强制保持插入','后进1格','要求你自己掰开','终点·深度调教完成'
+        ])
+      },
+      sm: {
+        name: 'SM版',
+        cells: makeCells([
+          '起点','跪姿等待指令','用项圈拉住你','后进2格','鞭打你10下',
+          '给你戴口球5分钟','后进1格','蒙眼+束缚你','强制边缘','完全使用你',
+          '后进3格','接受惩罚','对你滴蜡','后进1格','夹上乳夹',
+          '强制保持姿势','后进2格','鞭打到红','彻底臣服','后进1格',
+          '把你当家具使用','接受感官剥夺','后进3格','命令你爬行','完全控制你的高潮',
+          '后进1格','接受任何调教','标记你','后进2格','蒙眼等待未知',
+          '拉扯乳夹','后进1格','强制跪姿10分钟','使用你到求饶','后进3格',
+          '接受责罚不反抗','完全束缚无法动','后进1格',
+          '命令你自己报数','使用你到失声','后进2格','接受公开羞辱指令','强制保持张开',
+          '后进1格','滴蜡后冷刺激','彻底放弃抵抗','后进3格','把你当道具使用',
+          '后进1格','接受最终标记','完全剥夺名字','后进2格','终点·完全奴隶'
+        ])
+      },
+      butler: {
+        name: '男仆版',
+        cells: makeCells([
+          '起点','跪着为女主服务','女主踩踏你','后进2格','用嘴清洁',
+          '女主任意使用你','后进1格','接受女主指令','控制你的高潮','后进3格',
+          '为女主口交','女主骑乘你','后进1格','接受责罚','女主玩弄你',
+          '后进2格','完全服从女主','禁止你高潮','后进1格','为女主做任何事',
+          '女主使用你到满意','后进3格','接受女主的一切','彻底调教你','后进1格',
+          '跪着汇报状态','女主打你手心','后进2格','用身体当座椅','女主控制你射精',
+          '后进1格','接受女主羞辱','命令你保持跪姿','后进2格','彻底成为女主的',
+          '后进1格','终点·合格男仆'
+        ])
+      },
+      love: {
+        name: '恋爱版',
+        cells: makeCells([
+          '起点','深情对视10秒','轻吻对方额头','后进1格','拥抱1分钟',
+          '说一句情话','互相喂食','后进2格','亲吻到对方害羞','一起完成小事',
+          '后进1格','牵手散步','为对方唱歌','后进3格','写情书给对方',
+          '后进1格','互相按摩','一起看电影依偎','后进2格','告白',
+          '后进1格','接吻到喘不过气','抱你起来转圈','后进2格','一起做喜欢的事',
+          '后进1格','额头相抵','要求你说喜欢','后进3格','牵着不放开',
+          '后进1格','轻轻咬嘴唇','互相靠着休息','后进2格','再告白一次',
+          '后进1格',
+          '为对方系鞋带','后进2格','偷偷在耳边说想你','互相交换一件小物','后进1格',
+          '一起数星星','要求你认真听完情话','后进3格','牵手十指相扣不放开',
+          '后进1格','轻轻蹭对方鼻尖','一起许愿','后进2格','终点·告白成功'
+        ])
+      },
+      private: {
+        name: '私密版',
+        cells: makeCells([
+          '起点','脱掉上衣','互相抚摸','后进2格','口交30秒',
+          '插入你','后进1格','换姿势','一起高潮','后进3格',
+          '从后面进入你','自己动','后进1格','内射你','互相清理',
+          '后进2格','再来一次','抱着你做','后进1格','用玩具',
+          '后进3格','强制高潮','完全打开你','后进1格','自己骑乘',
+          '要求你保持姿势','后进2格','互相舔','后进1格','从侧面进入你',
+          '换到镜子前','后进2格','要求你说想要','后进1格','一起到高潮',
+          '后进1格','终点·满足'
+        ])
+      },
+      advanced: {
+        name: '高级版',
+        cells: makeCells([
+          '起点','完全束缚你','感官剥夺','后进2格','多重刺激',
+          '强制边缘到哭','后进3格','彻底使用你','接受一切指令','后进1格',
+          '连续高潮','后进2格','玩到你失神','完全沦陷','后进1格',
+          '接受最深调教','标记为所有物','后进3格','彻底失去抵抗','后进1格',
+          '使用你到极限','强制保持张开','后进2格','玩到你哭着求','后进1格',
+          '接受未知惩罚','完全填满你','后进3格','失去时间感','后进1格',
+          '要求你自己数次数','彻底打开所有地方','后进2格','终点·完全沦陷'
+        ])
+      }
+    };
+
+    // =====================================================
+    // 游戏状态
+    // lastEvent: 最近一次停下的格子事件（供机提示词注入，建议保留2轮）
+    // =====================================================
+    let state = {
+      version: 'maid',
+      playerPos: 0,
+      aiPos: 0,
+      turn: 'player',
+      finished: false,
+      lastEvent: null // { who, pos, text, roundsLeft }
+    };
+
+    function init() {
+      renderVersionBar();
+      loadProgress();
+      renderBoard();
+      updateUI();
+      setupFloatDrag();
+    }
+
+    function renderVersionBar() {
+      const bar = document.getElementById('versionBar');
+      bar.innerHTML = '';
+      Object.keys(BOARDS).forEach(key => {
+        const btn = document.createElement('button');
+        btn.className = 'ver-btn' + (state.version === key ? ' active' : '');
+        btn.textContent = BOARDS[key].name;
+        btn.onclick = () => switchVersion(key);
+        bar.appendChild(btn);
+      });
+    }
+
+    function switchVersion(key) {
+      if (state.playerPos > 0 || state.aiPos > 0) {
+        if (!confirm('切换版本会重置当前进度，确定吗？')) return;
+      }
+      state.version = key;
+      state.playerPos = 0;
+      state.aiPos = 0;
+      state.turn = 'player';
+      state.finished = false;
+      state.lastEvent = null;
+      renderVersionBar();
+      renderBoard();
+      updateUI();
+      saveProgress();
+    }
+
+    function renderBoard() {
+      const board = BOARDS[state.version];
+      document.getElementById('boardTitle').textContent = board.name + `（${board.cells.length}格）`;
+      const path = document.getElementById('boardPath');
+      path.innerHTML = '';
+      board.cells.forEach((cell, i) => {
+        const div = document.createElement('div');
+        div.className = 'cell ' + (cell.type || 'normal');
+        div.innerHTML = `<span class="num">${i}</span>${cell.text}`;
+        if (state.playerPos === i) {
+          const p = document.createElement('div');
+          p.className = 'piece player';
+          div.appendChild(p);
+        }
+        if (state.aiPos === i) {
+          const a = document.createElement('div');
+          a.className = 'piece ai';
+          div.appendChild(a);
+        }
+        path.appendChild(div);
+      });
+    }
+
+    function updateUI() {
+      document.getElementById('posInfo').textContent =
+        `你：第 ${state.playerPos} 格 · 小机：第 ${state.aiPos} 格`;
+      const isPlayer = state.turn === 'player';
+      document.getElementById('turnInfo').innerHTML =
+        state.finished
+          ? '<strong>本局结束</strong>'
+          : `当前回合：<strong>${isPlayer ? '你' : '小机'}</strong>`;
+      document.getElementById('rollBtn').disabled = !isPlayer || state.finished;
+      document.getElementById('rollBtn').textContent = isPlayer ? '掷骰子' : '等待中';
+      document.getElementById('aiHint').textContent =
+        !isPlayer && !state.finished
+          ? '对小机说「到你了」，然后点这里或调用 flightChessAiRoll()'
+          : '';
+      document.getElementById('floatPos').textContent =
+        `你${state.playerPos} · 机${state.aiPos}`;
+    }
+
+    function rollDice() {
+      if (state.turn !== 'player' || state.finished) return;
+      const num = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('diceFace').textContent = num;
+      movePiece('player', num);
+    }
+
+    function aiRoll() {
+      if (state.turn !== 'ai' || state.finished) return;
+      const num = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('diceFace').textContent = num;
+      movePiece('ai', num);
+    }
+    window.flightChessAiRoll = aiRoll;
+
+    // 获取最近事件（给机提示词用，每调用一次 roundsLeft -1）
+    window.flightChessGetLastEvent = function () {
+      if (!state.lastEvent || state.lastEvent.roundsLeft <= 0) return null;
+      const ev = { ...state.lastEvent };
+      state.lastEvent.roundsLeft -= 1;
+      saveProgress();
+      return ev;
+    };
+
+    function movePiece(who, steps) {
+      const board = BOARDS[state.version];
+      const max = board.cells.length - 1;
+      let pos = who === 'player' ? state.playerPos : state.aiPos;
+      pos = Math.min(pos + steps, max);
+
+      // 先落到目标格
+      if (who === 'player') state.playerPos = pos;
+      else state.aiPos = pos;
+
+      // 只有「停在」格子上才触发后进（路过不触发）
+      const cell = board.cells[pos];
+      if (cell.backSteps > 0 && pos < max) {
+        pos = Math.max(0, pos - cell.backSteps);
+        if (who === 'player') state.playerPos = pos;
+        else state.aiPos = pos;
+      }
+
+      renderBoard();
+      updateUI();
+
+      const finalCell = board.cells[pos];
+      // 记录事件，供机提示词注入（保留2轮）
+      state.lastEvent = {
+        who,
+        pos,
+        text: finalCell.text,
+        roundsLeft: 2
+      };
+
+      showEvent(who, finalCell, pos);
+
+      if (pos >= max) {
+        state.finished = true;
+        setTimeout(() => {
+          alert(who === 'player' ? '你先到达终点！' : '小机先到达终点！');
+          updateUI();
+        }, 350);
+        saveProgress();
+        return;
+      }
+
+      state.turn = who === 'player' ? 'ai' : 'player';
+      updateUI();
+      saveProgress();
+    }
+
+    function showEvent(who, cell, pos) {
+      if (cell.type === 'start') return;
+      const name = who === 'player' ? '你' : '小机';
+      let desc = cell.text;
+      if (cell.backSteps > 0) {
+        desc += `（已后退 ${cell.backSteps} 格，现位于第 ${pos} 格）`;
+      }
+      document.getElementById('eventTitle').textContent = `${name} 停在第 ${pos} 格`;
+      document.getElementById('eventDesc').textContent = desc;
+      document.getElementById('eventModal').classList.add('show');
+    }
+
+    function closeEvent() {
+      document.getElementById('eventModal').classList.remove('show');
+    }
+
+    function saveProgress() {
+      localStorage.setItem('flight_chess_player', JSON.stringify(state));
+      const btn = typeof event !== 'undefined' && event?.target;
+      if (btn && btn.tagName === 'BUTTON') {
+        const old = btn.textContent;
+        btn.textContent = '已保存';
+        setTimeout(() => btn.textContent = old, 900);
+      }
+    }
+
+    function loadProgress() {
+      const raw = localStorage.getItem('flight_chess_player');
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw);
+          state = { ...state, ...saved };
+        } catch (e) {}
+      }
+    }
+
+    function minimizeGame() {
+      saveProgress();
+      document.getElementById('gameMain').classList.add('hidden');
+      document.getElementById('floatBar').classList.add('show');
+    }
+
+    function restoreGame() {
+      document.getElementById('gameMain').classList.remove('hidden');
+      document.getElementById('floatBar').classList.remove('show');
+      loadProgress();
+      renderVersionBar();
+      renderBoard();
+      updateUI();
+    }
+
+    // 浮窗可拖动
+    function setupFloatDrag() {
+      const bar = document.getElementById('floatBar');
+      let dragging = false;
+      let startX, startY, origX, origY;
+
+      function onStart(e) {
+        if (e.target.closest('span') && e.target.textContent.includes('飞行棋')) {
+          // 点击文字恢复，不拖
+          return;
+        }
+        dragging = true;
+        const pt = e.touches ? e.touches[0] : e;
+        startX = pt.clientX;
+        startY = pt.clientY;
+        const rect = bar.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+        bar.style.right = 'auto';
+        bar.style.bottom = 'auto';
+        bar.style.left = origX + 'px';
+        bar.style.top = origY + 'px';
+        e.preventDefault();
+      }
+
+      function onMove(e) {
+        if (!dragging) return;
+        const pt = e.touches ? e.touches[0] : e;
+        const dx = pt.clientX - startX;
+        const dy = pt.clientY - startY;
+        bar.style.left = (origX + dx) + 'px';
+        bar.style.top = (origY + dy) + 'px';
+      }
+
+      function onEnd() {
+        dragging = false;
+      }
+
+      bar.addEventListener('mousedown', onStart);
+      bar.addEventListener('touchstart', onStart, { passive: false });
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('mouseup', onEnd);
+      window.addEventListener('touchend', onEnd);
+    }
+
+    document.getElementById('aiHint').addEventListener('click', function () {
+      if (state.turn === 'ai' && !state.finished) aiRoll();
+    });
+
+    init();
+  </script>
+</body>
+</html>
