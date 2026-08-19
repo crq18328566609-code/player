@@ -33,6 +33,15 @@
         return;
       }
       this._onRestore = opts.onRestore || null;
+      // 防止全局 button{flex:1;flex-direction:column} 把胶囊拉成竖条
+      const s = this.el.style;
+      s.display = 'inline-flex';
+      s.flexDirection = 'row';
+      s.alignItems = 'center';
+      s.width = 'auto';
+      s.height = 'auto';
+      s.maxHeight = '48px';
+      s.flex = 'none';
       this._bindDrag();
       this._bindRestoreClick();
     },
