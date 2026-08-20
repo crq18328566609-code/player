@@ -45,16 +45,31 @@
       font-weight: 600;
       color: #374151;
     }
-    .popup-header .close {
+    .popup-header .close, .popup-header .head-btn {
       width: 28px; height: 28px;
       border-radius: 50%;
       border: none;
       background: #F3F4F6;
       color: #6B7280;
-      font-size: 1rem;
+      font-size: 0.85rem;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
+    .popup-header .head-actions { display: flex; gap: 6px; align-items: center; }
+    .popup-header .head-btn { width: auto; padding: 0 10px; border-radius: 14px; font-size: 0.72rem; }
+    /* 最小化后隐藏弹窗，显示浮窗 */
+    body.min-mode .popup-wrap { display: none !important; }
+    .float-bar {
+      position: fixed; bottom: 18px; right: 14px; z-index: 40;
+      display: none; align-items: center; gap: 8px;
+      background: #C4A77D; color: #fff; padding: 10px 16px;
+      border-radius: 22px; font-size: 0.78rem; font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18); cursor: grab;
+      user-select: none; touch-action: none;
+      width: auto !important; height: auto !important; max-height: 48px;
+      flex: none !important; flex-direction: row !important;
+    }
+    .float-bar.show { display: inline-flex !important; }
 
     .board-area {
       flex: 1;
@@ -248,8 +263,12 @@
   <div class="popup-wrap">
     <div class="popup" id="popup">
       <div class="popup-header">
-        <div class="title" id="boardName">女仆版</div>
-        <button class="close" onclick="alert('关闭弹窗（前端接关闭逻辑）')">×</button>
+        <div class="title" id="boardName">女仆版 · 飞行棋</div>
+        <div class="head-actions">
+          <button type="button" class="head-btn" onclick="savePopupProgress()">保存</button>
+          <button type="button" class="head-btn" onclick="minimizePopup()" title="最小化">—</button>
+          <button type="button" class="close" onclick="closePopup()" title="关闭">×</button>
+        </div>
       </div>
 
       <div class="board-area">
@@ -359,6 +378,11 @@
           : `当前回合：<strong>${isPlayer ? '你' : '小机'}</strong>`;
       document.getElementById('btnRoll').disabled = !isPlayer || state.finished;
       document.getElementById('btnAi').disabled = isPlayer || state.finished;
+      const posEl = document.getElementById('posText');
+      if (posEl) posEl.textContent = '你 ' + state.playerPos + ' · 机 ' + state.aiPos;
+      if (window.FlightFloat) {
+        FlightFloat.setPosText('你' + state.playerPos + ' · 机' + state.aiPos);
+      }
     }
 
     function playerRoll() {
@@ -474,5 +498,47 @@
 // 规则提示（接入机时用）：格子含「互相/一起/双方」=双方一起做；
 // 否则女仆/SM=女方接受；男仆=男方接受；其他=谁停谁接受。禁止擅自改成两人各受一次。
 </script>
+
+  <!-- 聊天弹窗最小化后的浮窗（点标题恢复） -->
+  <div class="float-bar" id="floatBar">
+    <span data-float-restore style="cursor:pointer;">飞行棋进行中</span>
+    <span data-float-pos style="opacity:0.85;font-size:0.7rem;"></span>
+  </div>
+
+  <script src="float-window.js"></script>
+  <script>
+    // 最小化 / 恢复（仅聊天弹窗用；功能页总览不需要）
+    function minimizePopup() {
+      document.body.classList.add('min-mode');
+      if (window.FlightFloat) {
+        FlightFloat.setPosText('你' + state.playerPos + ' · 机' + state.aiPos);
+        FlightFloat.show();
+      }
+    }
+    function restorePopup() {
+      document.body.classList.remove('min-mode');
+      if (window.FlightFloat) FlightFloat.hide();
+    }
+    function closePopup() {
+      // 接入前端时：关闭弹窗；预览页则恢复并提示
+      restorePopup();
+      alert('关闭弹窗（接入前端时绑定 state.flightChessOpen=false）');
+    }
+    function savePopupProgress() {
+      localStorage.setItem('flight_chess_progress', JSON.stringify({
+        version: (typeof CURRENT_BOARD!=='undefined' && CURRENT_BOARD.key) ? CURRENT_BOARD.key : 'maid',
+        playerPos: state.playerPos,
+        aiPos: state.aiPos,
+        turn: state.turn,
+        finished: state.finished
+      }));
+      alert('进度已保存');
+    }
+    if (window.FlightFloat) {
+      FlightFloat.init({
+        onRestore: function () { restorePopup(); }
+      });
+    }
+  </script>
 </body>
 </html>
