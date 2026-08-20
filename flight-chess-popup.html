@@ -500,44 +500,76 @@
 </script>
 
   <!-- 聊天弹窗最小化后的浮窗（点标题恢复） -->
-  <div class="float-bar" id="floatBar">
+  <div class="float-bar" id="floatBar" style="display:none">
     <span data-float-restore style="cursor:pointer;">飞行棋进行中</span>
     <span data-float-pos style="opacity:0.85;font-size:0.7rem;"></span>
   </div>
 
   <script src="float-window.js"></script>
   <script>
-    // 最小化 / 恢复（仅聊天弹窗用；功能页总览不需要）
     function minimizePopup() {
-      document.body.classList.add('min-mode');
-      if (window.FlightFloat) {
-        FlightFloat.setPosText('你' + state.playerPos + ' · 机' + state.aiPos);
-        FlightFloat.show();
-      }
+      try {
+        document.body.classList.add('min-mode');
+        var bar = document.getElementById('floatBar');
+        if (bar) {
+          bar.classList.add('show');
+          bar.style.display = 'inline-flex';
+        }
+        if (window.FlightFloat) {
+          FlightFloat.setPosText('你' + state.playerPos + ' · 机' + state.aiPos);
+          FlightFloat.show();
+        }
+      } catch (e) { console.warn(e); }
     }
     function restorePopup() {
       document.body.classList.remove('min-mode');
+      var bar = document.getElementById('floatBar');
+      if (bar) {
+        bar.classList.remove('show');
+        bar.style.display = 'none';
+      }
       if (window.FlightFloat) FlightFloat.hide();
     }
     function closePopup() {
-      // 接入前端时：关闭弹窗；预览页则恢复并提示
       restorePopup();
-      alert('关闭弹窗（接入前端时绑定 state.flightChessOpen=false）');
+      // 预览：回到功能页；App 内改为关弹窗
+      if (document.referrer && /index\.html/i.test(document.referrer)) {
+        window.location.href = 'index.html';
+      } else {
+        alert('关闭弹窗（接入 App 时：flightChessOpen=false）');
+      }
     }
     function savePopupProgress() {
-      localStorage.setItem('flight_chess_progress', JSON.stringify({
-        version: (typeof CURRENT_BOARD!=='undefined' && CURRENT_BOARD.key) ? CURRENT_BOARD.key : 'maid',
+      var ver = (typeof CURRENT_BOARD !== 'undefined' && CURRENT_BOARD.key) ? CURRENT_BOARD.key : 'maid';
+      var payload = {
+        version: ver,
         playerPos: state.playerPos,
         aiPos: state.aiPos,
         turn: state.turn,
         finished: state.finished
-      }));
+      };
+      localStorage.setItem('flight_chess_progress', JSON.stringify(payload));
+      localStorage.setItem('flight_chess_player', JSON.stringify(payload));
       alert('进度已保存');
     }
-    if (window.FlightFloat) {
+    function bootFloat() {
+      if (!window.FlightFloat) return;
       FlightFloat.init({
         onRestore: function () { restorePopup(); }
       });
+      // 整条浮窗可点恢复（不只标题）
+      var bar = document.getElementById('floatBar');
+      if (bar) {
+        bar.addEventListener('click', function (e) {
+          if (bar.dataset.dragging === '1') return;
+          restorePopup();
+        });
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootFloat);
+    } else {
+      bootFloat();
     }
   </script>
 </body>
