@@ -319,7 +319,17 @@
     }
 
     // 示例：当前选的是女仆版（接入时替换成功能页选中的那个）
-    const CURRENT_BOARD = {
+   const savedBoard = localStorage.getItem('flight_chess_selected_board');
+
+let SELECTED_BOARD = null;
+
+if (savedBoard) {
+  try {
+    SELECTED_BOARD = JSON.parse(savedBoard);
+  } catch (e) {
+    console.error('读取棋盘失败:', e);
+  }
+} const CURRENT_BOARD = SELECTED_BOARD || {
       key: 'maid',
       name: '女仆版',
       cells: makeCells([
