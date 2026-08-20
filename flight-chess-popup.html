@@ -431,31 +431,54 @@
       return { ok: true, event, injectPrompt: buildInjectPrompt(event), dice: event && event.dice };
     };
 
+    function resolveReceiver(lander) {
+      const v = CURRENT_BOARD.key;
+      if (v === 'maid' || v === 'sm') return 'player';
+      if (v === 'butler') return 'ai';
+      return lander;
+    }
+
     function movePiece(who, steps) {
       const max = CURRENT_BOARD.cells.length - 1;
-      let pos = who === 'player' ? state.playerPos : state.aiPos;
-      pos = Math.min(pos + steps, max);
+      let pos = Math.min((who === 'player' ? state.playerPos : state.aiPos) + steps, max);
       if (who === 'player') state.playerPos = pos;
       else state.aiPos = pos;
+
+      // 只有停在格上才触发后进/退回
+      const landCell = CURRENT_BOARD.cells[pos];
+      let note = '';
+      const landIdx = pos;
+      if (landCell.jumpTo != null && pos < max) {
+        pos = Math.max(0, Math.min(landCell.jumpTo, max));
+        note = '（已退回到第 ' + pos + ' 格）';
+        if (who === 'player') state.playerPos = pos; else state.aiPos = pos;
+      } else if (landCell.backSteps > 0 && pos < max) {
+        pos = Math.max(0, pos - landCell.backSteps);
+        note = '（已后退 ' + landCell.backSteps + ' 格，现位于第 ' + pos + ' 格）';
+        if (who === 'player') state.playerPos = pos; else state.aiPos = pos;
+      }
 
       renderBoard();
       updateUI();
 
       const cell = CURRENT_BOARD.cells[pos];
-      // 弹窗简化：receiver 暂按谁停谁受（功能页有完整 maid/sm/butler 规则）
-      const receiver = who;
+      const receiver = resolveReceiver(who);
       state.lastEvent = {
         lander: who,
-        receiver,
-        pos,
-        text: cell.text,
+        receiver: receiver,
+        pos: pos,
+        landIdx: landIdx,
+        text: landCell.text,
         roundsLeft: 2
       };
 
-      if (cell.type !== 'start') {
-        document.getElementById('eventTitle').textContent =
-          `${who === 'player' ? '你' : '小机'} 停在第 ${pos} 格`;
-        document.getElementById('eventDesc').textContent = cell.text;
+      if (landCell.type !== 'start') {
+        const landerName = who === 'player' ? '你' : '小机';
+        const receiverName = receiver === 'player' ? '你' : '小机';
+        let desc = landCell.text + note;
+        if (who !== receiver) desc = '【本次由' + receiverName + '接受】\n' + desc;
+        document.getElementById('eventTitle').textContent = landerName + ' 停在第 ' + landIdx + ' 格';
+        document.getElementById('eventDesc').textContent = desc;
         document.getElementById('eventLayer').classList.add('show');
       }
 
@@ -468,7 +491,17 @@
       updateUI();
       localStorage.setItem('flight_chess_progress', JSON.stringify({
         version: CURRENT_BOARD.key,
-        ...state
+        playerPos: state.playerPos,
+        aiPos: state.aiPos,
+        turn: state.turn,
+        finished: state.finished
+      }));
+      localStorage.setItem('flight_chess_player', JSON.stringify({
+        version: CURRENT_BOARD.key,
+        playerPos: state.playerPos,
+        aiPos: state.aiPos,
+        turn: state.turn,
+        finished: state.finished
       }));
       return state.lastEvent;
     }
@@ -553,18 +586,14 @@
       alert('进度已保存');
     }
     function bootFloat() {
-      if (!window.FlightFloat) return;
+      if (!window.FlightFloat) {
+        console.warn('[popup] float-window.js 未加载，最小化浮窗不可用');
+        return;
+      }
       FlightFloat.init({
         onRestore: function () { restorePopup(); }
       });
-      // 整条浮窗可点恢复（不只标题）
-      var bar = document.getElementById('floatBar');
-      if (bar) {
-        bar.addEventListener('click', function (e) {
-          if (bar.dataset.dragging === '1') return;
-          restorePopup();
-        });
-      }
+      // 单击恢复由 float-window.js 在「未拖动」时触发，勿再绑 click 以免和拖动抢事件
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bootFloat);
