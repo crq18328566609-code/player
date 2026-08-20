@@ -3,212 +3,163 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>飞行棋 · 和机一起玩</title>
+  <title>飞行棋 · 功能页</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
+      font-family: system-ui, -apple-system, "PingFang SC", sans-serif;
       background: #F7F1EA;
-      color: #3D3229;
-      font-family: system-ui, -apple-system, sans-serif;
+      color: #3D3429;
       min-height: 100vh;
-      padding: 10px;
-      padding-bottom: 70px;
+      padding: 12px 14px 28px;
     }
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 520px;
-      margin: 0 auto 10px;
+    .page-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px;
     }
-    .top-bar h1 { font-size: 0.95rem; color: #8B7355; font-weight: 600; }
-    .btn {
-      border: none; border-radius: 8px; padding: 6px 11px;
-      font-size: 0.75rem; font-weight: 500; cursor: pointer;
+    .page-head h1 { font-size: 1.15rem; font-weight: 700; }
+    .page-sub {
+      font-size: 0.78rem; color: #9A8F82; margin-bottom: 12px;
     }
-    .btn-ghost {
-      background: #FDF8F3; border: 1px solid #E8DFD6; color: #8B7355;
+    .toolbar {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px;
     }
     .version-scroll {
-      display: flex; gap: 6px; overflow-x: auto; max-width: 520px;
-      margin: 0 auto 12px; padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+      flex: 1; min-width: 0;
+      display: flex; gap: 6px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
     }
     .version-scroll::-webkit-scrollbar { display: none; }
     .ver-btn {
-      flex-shrink: 0; padding: 5px 11px; border-radius: 16px;
-      border: 1px solid #E8DFD6; background: #FDF8F3;
-      font-size: 0.72rem; color: #7A6E63; cursor: pointer;
+      flex-shrink: 0;
+      border: 1px solid #E8DFD6;
+      background: #fff;
+      color: #6B5E52;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
     }
     .ver-btn.active {
-      background: #C4A77D; color: #fff; border-color: #C4A77D;
+      background: #E8DFD6;
+      color: #3D3429;
+      font-weight: 600;
+      border-color: #D4C4B0;
     }
-    .board-wrap {
-      max-width: 520px; margin: 0 auto; background: #FDF8F3;
-      border: 1px solid #E8DFD6; border-radius: 14px; padding: 10px 8px 14px;
-    }
-    .board-title {
-      text-align: center; font-size: 0.85rem; font-weight: 600;
-      color: #5C4E42; margin-bottom: 8px;
-    }
-    .path {
-      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
-    }
-    .cell {
-      aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #E8DFD6;
-      background: #F7F1EA; font-size: 0.48rem; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 2px 1px; position: relative;
-      line-height: 1.1; color: #5C4E42; overflow: hidden;
-    }
-    .cell.start { background: #E8F0E9; border-color: #A8C5B0; font-weight: 600; font-size: 0.55rem; }
-    .cell.end { background: #F5E6D3; border-color: #D4B896; font-weight: 600; font-size: 0.55rem; }
-    .cell.special { background: #F8EDE8; border-color: #E0B8A8; }
-    .cell .num {
-      position: absolute; top: 1px; left: 2px; font-size: 0.42rem;
-      color: #A68B6A; font-family: ui-monospace, monospace;
-    }
-    .piece {
-      width: 10px; height: 10px; border-radius: 50%; position: absolute;
-      bottom: 2px; border: 1px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
-    }
-    .piece.player { background: #C4A77D; right: 2px; }
-    .piece.ai { background: #7A9E8E; right: 13px; }
-
-    .status-bar {
-      max-width: 520px; margin: 12px auto 0;
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
-    }
-    .turn-info { font-size: 0.8rem; color: #5C4E42; }
-    .turn-info strong { color: #C4A77D; }
-    .dice-area { display: flex; align-items: center; gap: 8px; }
-    .dice {
-      width: 42px; height: 42px; border-radius: 9px; background: #FDF8F3;
-      border: 1.5px solid #E8DFD6; display: flex; align-items: center;
-      justify-content: center; font-size: 1.25rem; font-weight: 700;
-      color: #5C4E42; font-family: ui-monospace, monospace;
-    }
-    .roll-btn {
-      padding: 9px 16px; border-radius: 9px; border: none;
-      background: #C4A77D; color: #fff; font-size: 0.85rem;
-      font-weight: 600; cursor: pointer;
-    }
-    .roll-btn:disabled {
-      background: #E8DFD6; color: #A68B6A; cursor: not-allowed;
-    }
-    .ai-hint {
-      max-width: 520px; margin: 8px auto 0; text-align: center;
-      font-size: 0.75rem; color: #A68B6A;
-    }
-
-    .event-modal {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 50; opacity: 0; pointer-events: none;
-      transition: opacity 0.2s; padding: 18px;
-    }
-    .event-modal.show { opacity: 1; pointer-events: auto; }
-    .event-card {
-      width: 100%; max-width: 300px; background: #FDF8F3;
-      border-radius: 14px; padding: 18px 16px; border: 1px solid #E8DFD6;
-    }
-    .event-card h3 { font-size: 0.95rem; color: #5C4E42; margin-bottom: 6px; }
-    .event-card p { font-size: 0.82rem; color: #7A6E63; line-height: 1.45; margin-bottom: 14px; }
-    .event-card .ok {
-      width: 100%; padding: 10px; border-radius: 9px; border: none;
-      background: #C4A77D; color: #fff; font-size: 0.85rem;
-      font-weight: 600; cursor: pointer;
-    }
-
-    /* 可拖动浮窗 */
-    .float-bar {
-      position: fixed;
-      bottom: 18px;
-      right: 14px;
+    .btn-play {
+      flex-shrink: 0;
+      border: none;
       background: #C4A77D;
       color: #fff;
-      padding: 10px 16px;
-      border-radius: 22px;
-      font-size: 0.78rem;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
       font-weight: 600;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-      cursor: grab;
-      z-index: 40;
-      display: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-play:active { transform: scale(0.97); }
+    .board-card {
+      background: #FFFCFA;
+      border: 1px solid #EDE4DA;
+      border-radius: 16px;
+      padding: 12px 10px 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .board-title {
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #5C4F42;
+    }
+    .path {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cell {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid #E8DFD6;
+      background: #F7F1EA;
+      font-size: 0.42rem;
+      line-height: 1.25;
+      padding: 3px 2px;
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      user-select: none;
-      touch-action: none;
+      justify-content: flex-start;
+      text-align: center;
+      color: #6B5E52;
+      position: relative;
+      overflow: hidden;
     }
-    .float-bar.show { display: flex; }
-    .float-bar:active { cursor: grabbing; }
-    .game-main.hidden { display: none; }
-
+    .cell.start, .cell.end { background: #F0E6DC; font-weight: 600; }
+    .cell.special { background: #EDE4DA; }
+    .cell .num {
+      font-size: 0.38rem;
+      color: #B5A99C;
+      margin-bottom: 1px;
+    }
+    .piece {
+      position: absolute;
+      bottom: 3px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid #fff;
+    }
+    .piece.player { background: #C4787A; left: 4px; }
+    .piece.ai { background: #7A9E8E; right: 4px; }
     .pos-info {
-      max-width: 520px; margin: 8px auto 0; font-size: 0.72rem;
-      color: #A68B6A; text-align: center;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #8A7D70;
+      margin: 12px 4px 10px;
     }
-  
-    .page-sub { font-size: 0.75rem; color: #9CA3AF; margin-top: 2px; font-weight: 400; }
-    .toolbar-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 0 4px 10px; flex-wrap: wrap;
+    .btn-save {
+      width: 100%;
+      border: 1px solid #E8DFD6;
+      background: #FFFCFA;
+      color: #6B5E52;
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 0.88rem;
+      cursor: pointer;
     }
-    .toolbar-row .version-scroll { flex: 1; min-width: 0; margin: 0; }
-    .btn-accent {
-      background: #C4A77D; color: #fff; border: none; border-radius: 20px;
-      padding: 8px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-      white-space: nowrap; flex-shrink: 0;
+    .btn-save:active { background: #F7F1EA; }
+    .toast {
+      position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+      background: rgba(61,52,41,0.88); color: #fff;
+      padding: 8px 16px; border-radius: 999px; font-size: 0.8rem;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+      z-index: 50;
     }
-    .btn-accent:active { transform: scale(0.97); }
-    .save-full {
-      width: 100%; margin-top: 12px; padding: 12px; border-radius: 14px;
-    }
-    .hint-foot {
-      font-size: 0.72rem; color: #9CA3AF; text-align: center;
-      margin-top: 10px; line-height: 1.45; padding: 0 8px;
-    }
-
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
-  <div class="game-main" id="gameMain">
-    <div class="top-bar">
-      <div>
-        <h1>飞行棋</h1>
-        <p class="page-sub">选版本 · 总览棋盘 · 进度在聊天弹窗里玩</p>
-      </div>
-    </div>
+  <div class="page-head"><h1>飞行棋</h1></div>
+  <p class="page-sub">选版本 · 总览棋盘 · 进度在聊天弹窗里玩</p>
 
-    <div class="toolbar-row">
-      <div class="version-scroll" id="versionBar"></div>
-      <button type="button" class="btn btn-accent" onclick="goPlayInChat()">在聊天里玩</button>
-    </div>
-
-    <div class="board-wrap">
-      <div class="board-title" id="boardTitle">女仆版</div>
-      <div class="path" id="boardPath"></div>
-    </div>
-
-    <div class="pos-info" id="posInfo">你：第 0 格 · 小机：第 0 格 · 轮到你</div>
-
-    <button type="button" class="btn btn-ghost save-full" onclick="saveProgress()">保存进度</button>
-    <p class="hint-foot">掷骰在弹窗里进行。点「在聊天里玩」打开聊天弹窗页（含最小化浮窗）。</p>
+  <div class="toolbar">
+    <div class="version-scroll" id="versionBar"></div>
+    <button type="button" class="btn-play" id="btnPlay">在聊天里玩</button>
   </div>
 
-  <div class="event-modal" id="eventModal">
-    <div class="event-card">
-      <h3 id="eventTitle">格子事件</h3>
-      <p id="eventDesc">...</p>
-      <button class="ok" onclick="closeEvent()">知道了</button>
-    </div>
+  <div class="board-card">
+    <div class="board-title" id="boardTitle">—</div>
+    <div class="path" id="boardPath"></div>
   </div>
-<script src="float-window.js"></script>
+
+  <div class="pos-info" id="posInfo">你：第 0 格 · 小机：第 0 格 · 轮到你</div>
+  <button type="button" class="btn-save" id="btnSave">保存进度</button>
+  <div class="toast" id="toast"></div>
+
   <script>
-    // =====================================================
-    // 格子数据：去掉「被」，停下的人接受格子内容
-    // 后进X格：只有停在上面才生效，会实际后退
-    // =====================================================
-    function makeCells(list) {
+function makeCells(list) {
       return list.map((t, i) => {
         let type = 'normal';
         let backSteps = 0;
@@ -411,20 +362,45 @@
     // 游戏状态
     // lastEvent: 最近一次停下的格子事件（供机提示词注入，建议保留2轮）
     // =====================================================
+    
     let state = {
-      version: 'foreplay',
+      version: 'maid',
       playerPos: 0,
       aiPos: 0,
       turn: 'player',
       finished: false,
-      lastEvent: null // { who, pos, text, roundsLeft }
+      lastEvent: null
     };
 
-    function init() {
-      renderVersionBar();
-      loadProgress();
-      renderBoard();
-      updateUI();
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 1600);
+    }
+
+    function saveProgress() {
+      localStorage.setItem('flight_chess_player', JSON.stringify(state));
+      // 与弹窗页共用一份进度
+      localStorage.setItem('flight_chess_progress', JSON.stringify(state));
+      toast('进度已保存');
+    }
+
+    function loadProgress() {
+      const raw = localStorage.getItem('flight_chess_progress')
+        || localStorage.getItem('flight_chess_player');
+      if (!raw) return;
+      try {
+        const s = JSON.parse(raw);
+        if (s && BOARDS[s.version]) {
+          state.version = s.version;
+          state.playerPos = s.playerPos || 0;
+          state.aiPos = s.aiPos || 0;
+          state.turn = s.turn || 'player';
+          state.finished = !!s.finished;
+          state.lastEvent = s.lastEvent || null;
+        }
+      } catch (e) {}
     }
 
     function renderVersionBar() {
@@ -432,6 +408,7 @@
       bar.innerHTML = '';
       Object.keys(BOARDS).forEach(key => {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'ver-btn' + (state.version === key ? ' active' : '');
         btn.textContent = BOARDS[key].name;
         btn.onclick = () => switchVersion(key);
@@ -440,15 +417,16 @@
     }
 
     function switchVersion(key) {
-      if (state.playerPos > 0 || state.aiPos > 0) {
+      if (!BOARDS[key]) return;
+      if ((state.playerPos > 0 || state.aiPos > 0) && state.version !== key) {
         if (!confirm('切换版本会重置当前进度，确定吗？')) return;
+        state.playerPos = 0;
+        state.aiPos = 0;
+        state.turn = 'player';
+        state.finished = false;
+        state.lastEvent = null;
       }
       state.version = key;
-      state.playerPos = 0;
-      state.aiPos = 0;
-      state.turn = 'player';
-      state.finished = false;
-      state.lastEvent = null;
       renderVersionBar();
       renderBoard();
       updateUI();
@@ -457,13 +435,15 @@
 
     function renderBoard() {
       const board = BOARDS[state.version];
-      document.getElementById('boardTitle').textContent = board.name + `（${board.cells.length}格）`;
+      if (!board) return;
+      document.getElementById('boardTitle').textContent =
+        board.name + '（' + board.cells.length + '格）';
       const path = document.getElementById('boardPath');
       path.innerHTML = '';
       board.cells.forEach((cell, i) => {
         const div = document.createElement('div');
         div.className = 'cell ' + (cell.type || 'normal');
-        div.innerHTML = `<span class="num">${i}</span>${cell.text}`;
+        div.innerHTML = '<span class="num">' + i + '</span>' + cell.text;
         if (state.playerPos === i) {
           const p = document.createElement('div');
           p.className = 'piece player';
@@ -478,247 +458,26 @@
       });
     }
 
-        function updateUI() {
-      const posEl = document.getElementById('posInfo');
-      if (posEl) {
-        const turn = state.finished ? '本局结束' : ('轮到 ' + (state.turn === 'player' ? '你' : '小机'));
-        posEl.textContent = `你：第 ${state.playerPos} 格 · 小机：第 ${state.aiPos} 格 · ${turn}`;
-      }
-      const turnInfo = document.getElementById('turnInfo');
-      if (turnInfo) {
-        turnInfo.innerHTML = state.finished
-          ? '<strong>本局结束</strong>'
-          : `当前回合：<strong>${state.turn === 'player' ? '你' : '小机'}</strong>`;
-      }
-      const rollBtn = document.getElementById('rollBtn');
-      const aiBtn = document.getElementById('aiRollBtn');
-      const restartBtn = document.getElementById('restartBtn');
-      if (rollBtn) {
-        rollBtn.disabled = state.turn !== 'player' || state.finished;
-        rollBtn.style.display = state.finished ? 'none' : '';
-        rollBtn.textContent = state.turn === 'player' ? '掷骰子' : '等待中';
-      }
-      if (aiBtn) {
-        aiBtn.style.display = (state.turn !== 'player' && !state.finished) ? '' : 'none';
-      }
-      if (restartBtn) {
-        restartBtn.style.display = state.finished ? '' : 'none';
-      }
-      const aiHint = document.getElementById('aiHint');
-      if (aiHint) {
-        aiHint.textContent = (!state.finished && state.turn !== 'player')
-          ? '轮到小机：在弹窗里点「到你了」或调用 flightChessHandleYourTurn()'
-          : '';
-      }
-      if (window.FlightFloat) {
-        FlightFloat.setPosText(`你${state.playerPos} · 机${state.aiPos}`);
-      }
-    }
-
-    function rollDice() {
-      if (state.turn !== 'player' || state.finished) return;
-      const num = Math.floor(Math.random() * 6) + 1;
-      document.getElementById('diceFace').textContent = num;
-      movePiece('player', num);
-    }
-
-    function aiRoll() {
-      if (state.turn !== 'ai' || state.finished) return null;
-      const num = Math.floor(Math.random() * 6) + 1;
-      document.getElementById('diceFace').textContent = num;
-      movePiece('ai', num);
-      return state.lastEvent ? { ...state.lastEvent, dice: num } : null;
-    }
-
-    function buildInjectPrompt(ev) {
-      if (!ev) return '';
-      const landerName = ev.lander === 'player' ? '你（玩家）' : '小机';
-      const receiverName = ev.receiver === 'player' ? '你（玩家）' : '小机';
-      const mutual = /互相|一起|双方|彼此/.test(ev.text || '');
-      const whoLine = landerName + '停在第 ' + ev.pos + ' 格。';
-      const recvLine = mutual
-        ? '本格含「互相/一起」：双方一起完成，不要理解成两个人各受一次惩罚。'
-        : ('本格接受方：' + receiverName + '（由另一方执行；禁止擅自改成双份惩罚）。');
-      return [
-        '【飞行棋事件 · 已自动掷完 · 必须执行】',
-        '骰子已由系统掷出，禁止再讨论掷骰、禁止写掷骰代码、禁止询问是否要掷。',
-        whoLine,
-        recvLine,
-        '格子内容：' + ev.text,
-        '请立刻按格子内容认真完成（不是演戏），把这一格当作正在发生的事来做完，不要复述规则。'
-      ].join('\n');
-    }
-
-    // —— 对外接口 ——
-    // 仅掷骰（机回合），返回事件对象
-    window.flightChessAiRoll = aiRoll;
-
-    // 取事件（每取一次 roundsLeft-1，最多2轮）
-    window.flightChessGetLastEvent = function () {
-      if (!state.lastEvent || state.lastEvent.roundsLeft <= 0) return null;
-      const ev = { ...state.lastEvent };
-      state.lastEvent.roundsLeft -= 1;
-      saveProgress();
-      return ev;
-    };
-
-    // 生成可注入系统提示词（不消耗 roundsLeft）
-    window.flightChessBuildInjectPrompt = function (ev) {
-      return buildInjectPrompt(ev || state.lastEvent);
-    };
-
-    // 一键：机回合掷骰 + 返回 { event, injectPrompt }
-    // 前端识别到「到你了」时只调这个即可
-    window.flightChessHandleYourTurn = function () {
-      if (state.turn !== 'ai' || state.finished) {
-        return { ok: false, reason: state.finished ? 'finished' : 'not_ai_turn' };
-      }
-      const event = aiRoll();
-      const injectPrompt = buildInjectPrompt(event);
-      return { ok: true, event, injectPrompt, dice: event && event.dice };
-    };
-
-
-    // 根据图纸决定「谁接受格子内容」
-    // maid / sm → 永远是玩家（女方）
-    // butler → 永远是机（男方）
-    // 其他 → 谁停谁受
-    function resolveReceiver(lander) {
-      const v = state.version;
-      if (v === 'maid' || v === 'sm') return 'player';
-      if (v === 'butler') return 'ai';
-      return lander;
-    }
-
-    function receiverLabel(receiver) {
-      return receiver === 'player' ? '你' : '小机';
-    }
-
-    function movePiece(who, steps) {
-      const board = BOARDS[state.version];
-      const max = board.cells.length - 1;
-      let pos = who === 'player' ? state.playerPos : state.aiPos;
-      pos = Math.min(pos + steps, max);
-
-      // 先落到目标格
-      if (who === 'player') state.playerPos = pos;
-      else state.aiPos = pos;
-
-      // 只有「停在」格子上才触发后进/跳转（路过不触发）
-      const cell = board.cells[pos];
-      if (cell.jumpTo != null && pos < max) {
-        pos = Math.max(0, Math.min(cell.jumpTo, max));
-        if (who === 'player') state.playerPos = pos;
-        else state.aiPos = pos;
-      } else if (cell.backSteps > 0 && pos < max) {
-        pos = Math.max(0, pos - cell.backSteps);
-        if (who === 'player') state.playerPos = pos;
-        else state.aiPos = pos;
-      }
-
-      renderBoard();
-      updateUI();
-
-      const finalCell = board.cells[pos];
-      const receiver = resolveReceiver(who);
-      // lander=谁停的，receiver=谁接受格子内容（供机提示词）
-      state.lastEvent = {
-        lander: who,
-        receiver,
-        pos,
-        text: finalCell.text,
-        roundsLeft: 2
-      };
-
-      showEvent(who, receiver, finalCell, pos);
-
-      if (pos >= max) {
-        state.finished = true;
-        setTimeout(() => {
-          alert(who === 'player' ? '你先到达终点！' : '小机先到达终点！');
-          updateUI();
-        }, 350);
-        saveProgress();
-        return;
-      }
-
-      state.turn = who === 'player' ? 'ai' : 'player';
-      updateUI();
-      saveProgress();
-    }
-
-    function showEvent(lander, receiver, cell, pos) {
-      if (cell.type === 'start') return;
-      const landerName = receiverLabel(lander);
-      const receiverName = receiverLabel(receiver);
-      let desc = cell.text;
-      if (cell.jumpTo != null) {
-        desc += `（已退回到第 ${pos} 格）`;
-      } else if (cell.backSteps > 0) {
-        desc += `（已后退 ${cell.backSteps} 格，现位于第 ${pos} 格）`;
-      }
-      if (lander !== receiver) {
-        desc = `【本次由${receiverName}接受】\n` + desc;
-      }
-      document.getElementById('eventTitle').textContent = `${landerName} 停在第 ${pos} 格`;
-      document.getElementById('eventDesc').textContent = desc;
-      document.getElementById('eventModal').classList.add('show');
-    }
-
-    function closeEvent() {
-      document.getElementById('eventModal').classList.remove('show');
-    }
-
-    function saveProgress() {
-      localStorage.setItem('flight_chess_player', JSON.stringify(state));
-      const btn = typeof event !== 'undefined' && event?.target;
-      if (btn && btn.tagName === 'BUTTON') {
-        const old = btn.textContent;
-        btn.textContent = '已保存';
-        setTimeout(() => btn.textContent = old, 900);
-      }
-    }
-
-    function loadProgress() {
-      const raw = localStorage.getItem('flight_chess_player');
-      if (raw) {
-        try {
-          const saved = JSON.parse(raw);
-          state = { ...state, ...saved };
-        } catch (e) {}
-      }
+    function updateUI() {
+      const turn = state.finished
+        ? '本局结束'
+        : ('轮到' + (state.turn === 'player' ? '你' : '小机'));
+      document.getElementById('posInfo').textContent =
+        '你：第 ' + state.playerPos + ' 格 · 小机：第 ' + state.aiPos + ' 格 · ' + turn;
     }
 
     function goPlayInChat() {
       saveProgress();
-      // 功能页 → 聊天弹窗页（对应 App 里打开 flightChessOpen）
       window.location.href = 'flight-chess-popup.html';
     }
 
-    function minimizeGame() {
-      // 兼容旧调用：功能页不最小化，改为去弹窗
-      goPlayInChat();
-    }
+    document.getElementById('btnPlay').onclick = goPlayInChat;
+    document.getElementById('btnSave').onclick = saveProgress;
 
-    function restoreGame() {
-      document.getElementById('gameMain').classList.remove('hidden');
-      if (window.FlightFloat) FlightFloat.hide();
-      loadProgress();
-      renderVersionBar();
-      renderBoard();
-      updateUI();
-    }
-
-
-    document.getElementById('aiHint').addEventListener('click', function () {
-      if (state.turn === 'ai' && !state.finished) aiRoll();
-    });
-
-    // 浮窗模块
-    if (window.FlightFloat) {
-      FlightFloat.init({ onRestore: restoreGame });
-    }
-    init();
+    loadProgress();
+    renderVersionBar();
+    renderBoard();
+    updateUI();
   </script>
 </body>
 </html>
