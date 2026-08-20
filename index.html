@@ -467,9 +467,17 @@ function makeCells(list) {
     }
 
     function goPlayInChat() {
-      saveProgress();
-      window.location.href = 'flight-chess-popup.html';
-    }
+  saveProgress();
+  localStorage.setItem(
+    'flight_chess_selected_board',
+    JSON.stringify({
+      key: state.version,
+      ...BOARDS[state.version]
+    })
+  );
+  window.location.href = 'flight-chess-popup.html';
+}
+    
 
     document.getElementById('btnPlay').onclick = goPlayInChat;
     document.getElementById('btnSave').onclick = saveProgress;
