@@ -147,37 +147,52 @@
       max-width: 520px; margin: 8px auto 0; font-size: 0.72rem;
       color: #A68B6A; text-align: center;
     }
+  
+    .page-sub { font-size: 0.75rem; color: #9CA3AF; margin-top: 2px; font-weight: 400; }
+    .toolbar-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 4px 10px; flex-wrap: wrap;
+    }
+    .toolbar-row .version-scroll { flex: 1; min-width: 0; margin: 0; }
+    .btn-accent {
+      background: #C4A77D; color: #fff; border: none; border-radius: 20px;
+      padding: 8px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-accent:active { transform: scale(0.97); }
+    .save-full {
+      width: 100%; margin-top: 12px; padding: 12px; border-radius: 14px;
+    }
+    .hint-foot {
+      font-size: 0.72rem; color: #9CA3AF; text-align: center;
+      margin-top: 10px; line-height: 1.45; padding: 0 8px;
+    }
+
   </style>
 </head>
 <body>
   <div class="game-main" id="gameMain">
     <div class="top-bar">
-      <h1>飞行棋</h1>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost" onclick="saveProgress()">保存</button>
-        <button class="btn btn-ghost" onclick="minimizeGame()">最小化</button>
+      <div>
+        <h1>飞行棋</h1>
+        <p class="page-sub">选版本 · 总览棋盘 · 进度在聊天弹窗里玩</p>
       </div>
     </div>
 
-    <div class="version-scroll" id="versionBar"></div>
+    <div class="toolbar-row">
+      <div class="version-scroll" id="versionBar"></div>
+      <button type="button" class="btn btn-accent" onclick="goPlayInChat()">在聊天里玩</button>
+    </div>
 
     <div class="board-wrap">
       <div class="board-title" id="boardTitle">女仆版</div>
       <div class="path" id="boardPath"></div>
     </div>
 
-    <div class="pos-info" id="posInfo">你：第 0 格 · 小机：第 0 格</div>
+    <div class="pos-info" id="posInfo">你：第 0 格 · 小机：第 0 格 · 轮到你</div>
 
-    <div class="status-bar">
-      <div class="turn-info" id="turnInfo">当前回合：<strong>你</strong></div>
-      <div class="dice-area">
-        <div class="dice" id="diceFace">?</div>
-        <button class="roll-btn" id="rollBtn" onclick="rollDice()">掷骰子</button>
-        <button class="roll-btn" id="aiRollBtn" onclick="manualAiRoll()" style="display:none;background:#7A9E8E">机掷骰</button>
-        <button class="roll-btn" id="restartBtn" onclick="restartGame()" style="display:none;background:#999">再来一局</button>
-      </div>
-    </div>
-    <div class="ai-hint" id="aiHint"></div>
+    <button type="button" class="btn btn-ghost save-full" onclick="saveProgress()">保存进度</button>
+    <p class="hint-foot">掷骰在弹窗里进行。点「在聊天里玩」打开聊天弹窗页（含最小化浮窗）。</p>
   </div>
 
   <div class="event-modal" id="eventModal">
@@ -187,13 +202,7 @@
       <button class="ok" onclick="closeEvent()">知道了</button>
     </div>
   </div>
-
-  <div class="float-bar" id="floatBar">
-    <span data-float-restore style="cursor:pointer;">飞行棋进行中</span>
-    <span data-float-pos style="opacity:0.85;font-size:0.7rem;"></span>
-  </div>
-
-  <script src="float-window.js"></script>
+<script src="float-window.js"></script>
   <script>
     // =====================================================
     // 格子数据：去掉「被」，停下的人接受格子内容
@@ -469,53 +478,41 @@
       });
     }
 
-    function updateUI() {
-      document.getElementById('posInfo').textContent =
-        `你：第 ${state.playerPos} 格 · 小机：第 ${state.aiPos} 格`;
-      const isPlayer = state.turn === 'player';
-      document.getElementById('turnInfo').innerHTML =
-        state.finished
+        function updateUI() {
+      const posEl = document.getElementById('posInfo');
+      if (posEl) {
+        const turn = state.finished ? '本局结束' : ('轮到 ' + (state.turn === 'player' ? '你' : '小机'));
+        posEl.textContent = `你：第 ${state.playerPos} 格 · 小机：第 ${state.aiPos} 格 · ${turn}`;
+      }
+      const turnInfo = document.getElementById('turnInfo');
+      if (turnInfo) {
+        turnInfo.innerHTML = state.finished
           ? '<strong>本局结束</strong>'
-          : `当前回合：<strong>${isPlayer ? '你' : '小机'}</strong>`;
+          : `当前回合：<strong>${state.turn === 'player' ? '你' : '小机'}</strong>`;
+      }
       const rollBtn = document.getElementById('rollBtn');
       const aiBtn = document.getElementById('aiRollBtn');
       const restartBtn = document.getElementById('restartBtn');
       if (rollBtn) {
-        rollBtn.disabled = !isPlayer || state.finished;
+        rollBtn.disabled = state.turn !== 'player' || state.finished;
         rollBtn.style.display = state.finished ? 'none' : '';
-        rollBtn.textContent = isPlayer ? '掷骰子' : '等待中';
+        rollBtn.textContent = state.turn === 'player' ? '掷骰子' : '等待中';
       }
       if (aiBtn) {
-        aiBtn.style.display = (!isPlayer && !state.finished) ? '' : 'none';
-        aiBtn.disabled = isPlayer || state.finished;
+        aiBtn.style.display = (state.turn !== 'player' && !state.finished) ? '' : 'none';
       }
       if (restartBtn) {
         restartBtn.style.display = state.finished ? '' : 'none';
       }
-      document.getElementById('aiHint').textContent =
-        !isPlayer && !state.finished
-          ? '轮到小机：可点「机掷骰」，或对机说「到你了」调用 flightChessHandleYourTurn()'
-          : (state.finished ? '本局结束，可点「再来一局」' : '');
+      const aiHint = document.getElementById('aiHint');
+      if (aiHint) {
+        aiHint.textContent = (!state.finished && state.turn !== 'player')
+          ? '轮到小机：在弹窗里点「到你了」或调用 flightChessHandleYourTurn()'
+          : '';
+      }
       if (window.FlightFloat) {
         FlightFloat.setPosText(`你${state.playerPos} · 机${state.aiPos}`);
       }
-    }
-
-    function manualAiRoll() {
-      const ev = aiRoll();
-      if (!ev && typeof console !== 'undefined') console.warn('aiRoll skipped');
-    }
-
-    function restartGame() {
-      state.playerPos = 0;
-      state.aiPos = 0;
-      state.turn = 'player';
-      state.finished = false;
-      state.lastEvent = null;
-      document.getElementById('diceFace').textContent = '?';
-      renderBoard();
-      updateUI();
-      saveProgress();
     }
 
     function rollDice() {
@@ -692,10 +689,15 @@
       }
     }
 
-    function minimizeGame() {
+    function goPlayInChat() {
       saveProgress();
-      document.getElementById('gameMain').classList.add('hidden');
-      if (window.FlightFloat) FlightFloat.show();
+      // 功能页 → 聊天弹窗页（对应 App 里打开 flightChessOpen）
+      window.location.href = 'flight-chess-popup.html';
+    }
+
+    function minimizeGame() {
+      // 兼容旧调用：功能页不最小化，改为去弹窗
+      goPlayInChat();
     }
 
     function restoreGame() {
